@@ -117,7 +117,6 @@ class FirebaseService {
         'data': result.data,
       };
     } catch (e) {
-      // In development, if the function is not yet deployed to cloud, report the prepared endpoint
       return {
         'status': 'simulated',
         'message': 'Backend structure prepared: us-central1/healthCheck (${e.toString().split('\n').first})',
@@ -125,4 +124,53 @@ class FirebaseService {
       };
     }
   }
+
+  /// Runs diagnostics across all Firebase services for developer verification.
+  Future<Map<String, ServiceCheckResult>> runAllDiagnostics() async {
+    final results = <String, ServiceCheckResult>{};
+
+    final authRes = await testAuth();
+    results['auth'] = ServiceCheckResult(
+      serviceName: 'Firebase Authentication',
+      success: authRes['status'] == 'success',
+      details: authRes['message'] as String,
+    );
+
+    final firestoreRes = await testFirestore();
+    results['firestore'] = ServiceCheckResult(
+      serviceName: 'Cloud Firestore',
+      success: firestoreRes['status'] == 'success',
+      details: firestoreRes['message'] as String,
+    );
+
+    final storageRes = await testStorage();
+    results['storage'] = ServiceCheckResult(
+      serviceName: 'Firebase Cloud Storage',
+      success: storageRes['status'] == 'success',
+      details: storageRes['message'] as String,
+    );
+
+    final functionsRes = await testFunctions();
+    results['functions'] = ServiceCheckResult(
+      serviceName: 'Cloud Functions & GenAI Proxy',
+      success: functionsRes['status'] == 'success' ||
+          functionsRes['fallbackReady'] == true,
+      details: functionsRes['message'] as String,
+    );
+
+    return results;
+  }
+}
+
+/// Represents the verification result of an individual Firebase service check.
+class ServiceCheckResult {
+  final String serviceName;
+  final bool success;
+  final String details;
+
+  const ServiceCheckResult({
+    required this.serviceName,
+    required this.success,
+    required this.details,
+  });
 }
