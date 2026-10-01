@@ -46,3 +46,13 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Node / Functions / Secrets
+node_modules/
+**/node_modules/
+.env
+.env.*
+!.env.example
+*.local
+firebase-debug.log
+firebase-debug.*.log

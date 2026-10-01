@@ -1,0 +1,53 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check user ownership
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Users collection: parents and educators
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+    
+    // Categories: public read, admin/functions write
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+    
+    // Vocabulary items: public read, admin/functions write
+    match /vocabularyItems/{itemId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+    
+    // Learning sessions: authenticated users
+    match /sessions/{sessionId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Quiz results: authenticated users
+    match /quizResults/{resultId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Progress records: authenticated users
+    match /progressRecords/{recordId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Health check / connectivity test document
+    match /_system_health/{docId} {
+      allow read, write: if true;
+    }
+  }
+}

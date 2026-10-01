@@ -1,0 +1,17 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Vocabulary media (images and audio): public read, authenticated write
+    match /vocabulary/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    // System health check file for connectivity verification
+    match /_system_health/{fileName} {
+      allow read, write: if true;
+    }
+  }
+}
