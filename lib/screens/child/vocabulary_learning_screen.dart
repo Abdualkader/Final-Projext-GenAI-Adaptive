@@ -4,12 +4,14 @@ import '../../core/constants/app_dimensions.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/utils/responsive_layout.dart';
+import '../../models/vocabulary_item_model.dart';
 import '../../repositories/mock_data_repository.dart';
 import '../../widgets/large_icon_button.dart';
 import '../../widgets/vocabulary_card.dart';
 
-/// Vocabulary Learning Screen faithfully matching Wireframe 4:
-/// Uncluttered flashcard presentation, clear bilingual text, category pill, and 3-step navigation.
+/// Vocabulary Learning Screen faithfully matching Wireframe 4 & Week 4 requirements:
+/// Supports dynamic category loading, clean progress indicator, bilingual typography,
+/// audio feedback, and explicit Next button.
 class VocabularyLearningScreen extends StatefulWidget {
   final String categoryId;
 
@@ -25,7 +27,56 @@ class VocabularyLearningScreen extends StatefulWidget {
 
 class _VocabularyLearningScreenState extends State<VocabularyLearningScreen> {
   int _currentIndex = 0;
-  final _items = MockDataRepository.getAnimalVocabulary();
+  late String _activeCategoryId;
+  late List<VocabularyItemModel> _items;
+
+  @override
+  void initState() {
+    super.initState();
+    _activeCategoryId = widget.categoryId;
+    _items = MockDataRepository.getVocabularyForCategory(_activeCategoryId);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is String && args != _activeCategoryId) {
+      setState(() {
+        _activeCategoryId = args;
+        _items = MockDataRepository.getVocabularyForCategory(_activeCategoryId);
+        _currentIndex = 0;
+      });
+    }
+  }
+
+  String _getCategoryTitle(AppLocalizations l10n) {
+    switch (_activeCategoryId) {
+      case 'letters':
+        return l10n.text('category_letters');
+      case 'numbers':
+        return l10n.text('category_numbers');
+      case 'colours':
+        return l10n.text('category_colours');
+      case 'animals':
+      default:
+        return l10n.text('category_animals');
+    }
+  }
+
+  IconData _getCategoryIcon() {
+    switch (_activeCategoryId) {
+      case 'letters':
+        return Icons.spellcheck_rounded;
+      case 'numbers':
+        return Icons.looks_one_rounded;
+      case 'colours':
+        return Icons.palette_rounded;
+      case 'animals':
+      default:
+        return Icons.pets_rounded;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +102,7 @@ class _VocabularyLearningScreenState extends State<VocabularyLearningScreen> {
                     size: 48,
                     onPressed: () => Navigator.pop(context),
                   ),
-                  // Category Pill (e.g. "Animals")
+                  // Category Pill
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppDimensions.spaceM,
@@ -65,14 +116,14 @@ class _VocabularyLearningScreenState extends State<VocabularyLearningScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
-                          Icons.pets_rounded,
+                        Icon(
+                          _getCategoryIcon(),
                           size: 22,
-                          color: AppColors.textAnimals,
+                          color: AppColors.primaryBlue,
                         ),
                         const SizedBox(width: AppDimensions.spaceS),
                         Text(
-                          l10n.text('category_animals'),
+                          _getCategoryTitle(l10n),
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -122,15 +173,17 @@ class _VocabularyLearningScreenState extends State<VocabularyLearningScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: AppDimensions.spaceL),
+              const SizedBox(height: AppDimensions.spaceM),
               // Main Vocabulary Card
               Expanded(
                 child: VocabularyCard(
                   item: currentItem,
                   hasPrevious: _currentIndex > 0,
-                  hasNext: _currentIndex < totalCount - 1,
+                  hasNext: true,
+                  nextButtonLabel: l10n.text('btn_next'),
+                  audioButtonLabel: l10n.text('btn_listen'),
                   onPlayAudio: () {
-                    // Audio pronunciation trigger (simulated in Week 3)
+                    // Audio pronunciation trigger (simulated with calm sensory banner)
                     ScaffoldMessenger.of(context).hideCurrentSnackBar();
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -162,13 +215,17 @@ class _VocabularyLearningScreenState extends State<VocabularyLearningScreen> {
                     if (_currentIndex < totalCount - 1) {
                       setState(() => _currentIndex++);
                     } else {
-                      // Prompt to take Quiz
-                      Navigator.pushNamed(context, AppRoutes.childQuiz);
+                      // Navigate to Quiz with category argument
+                      Navigator.pushNamed(
+                        context,
+                        AppRoutes.childQuiz,
+                        arguments: _activeCategoryId,
+                      );
                     }
                   },
                 ),
               ),
-              const SizedBox(height: AppDimensions.spaceM),
+              const SizedBox(height: AppDimensions.spaceS),
             ],
           ),
         ),

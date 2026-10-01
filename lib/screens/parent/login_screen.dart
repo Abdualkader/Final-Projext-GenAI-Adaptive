@@ -7,10 +7,16 @@ import '../../core/utils/responsive_layout.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/large_icon_button.dart';
 
-/// Parent & Educator Portal Login Screen.
-/// Provides a clear sign-in skeleton while preserving guest child access without cognitive burden.
+/// Parent & Educator Portal Login Screen matching Task 6:
+/// Provides email/password fields, input validation message area, language switch,
+/// and child guest bypass.
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final VoidCallback? onToggleLocale;
+
+  const LoginScreen({
+    super.key,
+    this.onToggleLocale,
+  });
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -19,12 +25,49 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  String? _validationError;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  void _handleLogin(AppLocalizations l10n) {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty) {
+      setState(() {
+        _validationError = l10n.text('email_required');
+      });
+      return;
+    }
+
+    if (!email.contains('@') || !email.contains('.')) {
+      setState(() {
+        _validationError = l10n.text('invalid_email');
+      });
+      return;
+    }
+
+    if (password.isEmpty) {
+      setState(() {
+        _validationError = l10n.text('password_required');
+      });
+      return;
+    }
+
+    setState(() {
+      _validationError = null;
+    });
+
+    // Valid mock login -> Navigate to Child Selection
+    Navigator.pushReplacementNamed(
+      context,
+      AppRoutes.parentChildSelection,
+    );
   }
 
   @override
@@ -43,6 +86,14 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
         title: Text(l10n.text('parent_portal')),
+        actions: [
+          if (widget.onToggleLocale != null)
+            IconButton(
+              icon: const Icon(Icons.language_rounded, color: AppColors.primaryBlue),
+              tooltip: l10n.text('language'),
+              onPressed: widget.onToggleLocale,
+            ),
+        ],
       ),
       body: SafeArea(
         child: ResponsiveLayout(
@@ -93,12 +144,47 @@ class _LoginScreenState extends State<LoginScreen> {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: AppDimensions.spaceL),
+
+                    // Inline Validation Message Area
+                    if (_validationError != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(AppDimensions.spaceM),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFFBEB),
+                          borderRadius: BorderRadius.circular(AppDimensions.radiusM),
+                          border: Border.all(color: const Color(0xFFFDE68A), width: 1.5),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.info_outline_rounded,
+                              color: Color(0xFFD97706),
+                              size: 20,
+                            ),
+                            const SizedBox(width: AppDimensions.spaceS),
+                            Expanded(
+                              child: Text(
+                                _validationError!,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF92400E),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppDimensions.spaceM),
+                    ],
+
                     // Email Field
                     TextField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
                         labelText: l10n.text('email'),
+                        hintText: 'educator@school.edu',
                         prefixIcon: const Icon(Icons.email_outlined),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(AppDimensions.radiusM),
@@ -122,13 +208,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     // Login Button
                     AppButton(
                       label: l10n.text('login_btn'),
-                      onPressed: () {
-                        // Navigate to Child Selection or Dashboard
-                        Navigator.pushReplacementNamed(
-                          context,
-                          AppRoutes.parentChildSelection,
-                        );
-                      },
+                      onPressed: () => _handleLogin(l10n),
                     ),
                     const SizedBox(height: AppDimensions.spaceM),
                     // Child Guest Button

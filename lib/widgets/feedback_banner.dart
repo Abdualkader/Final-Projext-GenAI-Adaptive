@@ -2,17 +2,19 @@ import 'package:flutter/material.dart';
 import '../core/constants/app_colors.dart';
 import '../core/constants/app_dimensions.dart';
 
-/// Positive reinforcement banner matching Wireframe 2:
-/// Gentle character star, calm encouraging copy, and 3-star reward indicators.
+enum FeedbackState { neutral, correct, gentleCorrection }
+
+/// Positive reinforcement and gentle corrective feedback banner matching Task 10 & Wireframe 2:
+/// Gentle character mascot, calm copy, zero red warning screens or harsh alarms.
 class FeedbackBanner extends StatelessWidget {
-  final bool isSuccess;
+  final FeedbackState state;
   final String title;
   final String subtitle;
   final int earnedStars; // 0 to 3
 
   const FeedbackBanner({
     super.key,
-    required this.isSuccess,
+    required this.state,
     required this.title,
     required this.subtitle,
     this.earnedStars = 3,
@@ -20,9 +22,35 @@ class FeedbackBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = isSuccess ? AppColors.successLight : AppColors.primaryContainer;
-    final borderColor = isSuccess ? AppColors.success.withOpacity(0.3) : AppColors.borderLight;
-    final textColor = isSuccess ? const Color(0xFF15803D) : AppColors.primaryDark;
+    Color bgColor;
+    Color borderColor;
+    Color textColor;
+    IconData mascotIcon;
+    Color mascotColor;
+
+    switch (state) {
+      case FeedbackState.correct:
+        bgColor = AppColors.successLight;
+        borderColor = AppColors.success.withOpacity(0.3);
+        textColor = const Color(0xFF15803D);
+        mascotIcon = Icons.star_rounded;
+        mascotColor = AppColors.starGold;
+        break;
+      case FeedbackState.gentleCorrection:
+        bgColor = const Color(0xFFFFFBEB);
+        borderColor = const Color(0xFFFDE68A);
+        textColor = const Color(0xFF92400E);
+        mascotIcon = Icons.spa_rounded; // Gentle seedling/sprout instead of an error 'X'
+        mascotColor = const Color(0xFFF59E0B);
+        break;
+      case FeedbackState.neutral:
+        bgColor = AppColors.primaryContainer;
+        borderColor = AppColors.borderLight;
+        textColor = AppColors.primaryDark;
+        mascotIcon = Icons.star_rounded;
+        mascotColor = AppColors.starGold;
+        break;
+    }
 
     return Container(
       width: double.infinity,
@@ -37,24 +65,25 @@ class FeedbackBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Smiling Mascot Star
+          // Friendly Mascot
           Container(
             width: 48,
             height: 48,
-            decoration: const BoxDecoration(
-              color: AppColors.starBackground,
+            decoration: BoxDecoration(
+              color: Colors.white,
               shape: BoxShape.circle,
+              border: Border.all(color: borderColor),
             ),
-            child: const Center(
+            child: Center(
               child: Icon(
-                Icons.star_rounded,
-                size: 34,
-                color: AppColors.starGold,
+                mascotIcon,
+                size: 32,
+                color: mascotColor,
               ),
             ),
           ),
           const SizedBox(width: AppDimensions.spaceM),
-          // Encouraging Text
+          // Copy
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,7 +92,7 @@ class FeedbackBanner extends StatelessWidget {
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 17,
                     fontWeight: FontWeight.w800,
                     color: textColor,
                   ),
@@ -71,21 +100,21 @@ class FeedbackBanner extends StatelessWidget {
                 Text(
                   subtitle,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 13,
                     color: AppColors.textSecondary.withOpacity(0.85),
                   ),
                 ),
               ],
             ),
           ),
-          // 3 Star Indicators
+          // Star indicators
           Row(
             mainAxisSize: MainAxisSize.min,
             children: List.generate(3, (index) {
               final isFilled = index < earnedStars;
               return Icon(
                 isFilled ? Icons.star_rounded : Icons.star_border_rounded,
-                size: 28,
+                size: 26,
                 color: isFilled ? AppColors.starGold : AppColors.borderMedium,
               );
             }),

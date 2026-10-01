@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import '../core/constants/app_colors.dart';
 import '../core/constants/app_dimensions.dart';
 import '../models/vocabulary_item_model.dart';
+import 'app_button.dart';
 import 'large_icon_button.dart';
 
-/// Vocabulary flashcard matching Wireframe 4:
-/// Uncluttered visual presentation, large bilingual typography, and prominent audio button.
+/// Vocabulary flashcard matching Wireframe 4 & Week 4 requirements:
+/// Uncluttered visual presentation, large bilingual typography, prominent audio button,
+/// and explicit Next button.
 class VocabularyCard extends StatelessWidget {
   final VocabularyItemModel item;
   final VoidCallback onPlayAudio;
@@ -13,6 +15,8 @@ class VocabularyCard extends StatelessWidget {
   final VoidCallback onNext;
   final bool hasPrevious;
   final bool hasNext;
+  final String nextButtonLabel;
+  final String audioButtonLabel;
 
   const VocabularyCard({
     super.key,
@@ -22,6 +26,8 @@ class VocabularyCard extends StatelessWidget {
     required this.onNext,
     this.hasPrevious = true,
     this.hasNext = true,
+    this.nextButtonLabel = 'Next',
+    this.audioButtonLabel = 'Play Audio',
   });
 
   @override
@@ -100,41 +106,35 @@ class VocabularyCard extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: AppDimensions.spaceL),
-        // Bottom Action Controls
+        const SizedBox(height: AppDimensions.spaceM),
+        // Central Audio Action Button
+        AppButton(
+          label: '🔊  $audioButtonLabel',
+          height: 52,
+          backgroundColor: AppColors.primaryBlue,
+          onPressed: onPlayAudio,
+        ),
+        const SizedBox(height: AppDimensions.spaceS),
+        // Pagination & Navigation Row
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            // Previous Word
-            LargeIconButton(
-              icon: Icons.arrow_back_rounded,
-              size: 58,
-              onPressed: hasPrevious ? onPrevious : () {},
-              iconColor: hasPrevious
-                  ? AppColors.primaryBlue
-                  : AppColors.textMuted.withOpacity(0.4),
-              backgroundColor: Colors.white,
-            ),
-            // Prominent Audio Speaker (76dp)
-            LargeIconButton(
-              icon: Icons.volume_up_rounded,
-              size: 76,
-              iconSize: 42,
-              hasOuterGlow: true,
-              onPressed: onPlayAudio,
-              backgroundColor: AppColors.primaryBlue,
-              iconColor: Colors.white,
-              tooltip: 'Listen to pronunciation',
-            ),
-            // Next Word
-            LargeIconButton(
-              icon: Icons.arrow_forward_rounded,
-              size: 58,
-              onPressed: hasNext ? onNext : () {},
-              iconColor: hasNext
-                  ? AppColors.primaryBlue
-                  : AppColors.textMuted.withOpacity(0.4),
-              backgroundColor: Colors.white,
+            if (hasPrevious)
+              LargeIconButton(
+                icon: Icons.arrow_back_rounded,
+                size: 52,
+                onPressed: onPrevious,
+                iconColor: AppColors.primaryBlue,
+                backgroundColor: Colors.white,
+              ),
+            if (hasPrevious) const SizedBox(width: AppDimensions.spaceM),
+            Expanded(
+              child: AppButton(
+                label: nextButtonLabel,
+                icon: Icons.arrow_forward_rounded,
+                height: 52,
+                backgroundColor: const Color(0xFF10B981),
+                onPressed: onNext,
+              ),
             ),
           ],
         ),
@@ -163,10 +163,47 @@ class VocabularyCard extends StatelessWidget {
         iconColor = const Color(0xFF3B82F6);
         label = '🐟 Fish / سمكة';
         break;
+      case 'red':
+        icon = Icons.palette_rounded;
+        iconColor = const Color(0xFFEF4444);
+        label = '🔴 Red / أحمر';
+        break;
+      case 'blue':
+        icon = Icons.palette_rounded;
+        iconColor = const Color(0xFF3B82F6);
+        label = '🔵 Blue / أزرق';
+        break;
+      case 'green':
+        icon = Icons.palette_rounded;
+        iconColor = const Color(0xFF10B981);
+        label = '🟢 Green / أخضر';
+        break;
+      case 'one':
+        icon = Icons.looks_one_rounded;
+        iconColor = const Color(0xFF0288D1);
+        label = '1️⃣ One / واحد';
+        break;
+      case 'two':
+        icon = Icons.looks_two_rounded;
+        iconColor = const Color(0xFFF59E0B);
+        label = '2️⃣ Two / اثنان';
+        break;
+      case 'three':
+        icon = Icons.looks_3_rounded;
+        iconColor = const Color(0xFF10B981);
+        label = '3️⃣ Three / ثلاثة';
+        break;
+      case 'alif':
+      case 'baa':
+      case 'taa':
+        icon = Icons.text_fields_rounded;
+        iconColor = const Color(0xFF8E24AA);
+        label = '🔤 Letter / حرف';
+        break;
       default:
-        icon = Icons.image_rounded;
+        icon = Icons.auto_awesome_rounded;
         iconColor = AppColors.primaryBlue;
-        label = 'Vocabulary Item';
+        label = 'Learning Card';
     }
 
     return Column(

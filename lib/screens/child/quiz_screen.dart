@@ -10,26 +10,81 @@ import '../../widgets/feedback_banner.dart';
 import '../../widgets/large_icon_button.dart';
 import '../../widgets/quiz_choice_card.dart';
 
-/// Interactive Quiz Screen faithfully matching Wireframe 2:
-/// Calm sensory layout, 3 clear choices, positive feedback star mascot, and prompt audio replay.
+/// Interactive Quiz Screen faithfully matching Wireframe 2 & Week 4 requirements:
+/// Supports dynamic category questions, positive reinforcement on correct answer,
+/// gentle corrective feedback on incorrect answer (no red screens, no harsh sounds),
+/// and replay prompt audio.
 class QuizScreen extends StatefulWidget {
-  const QuizScreen({super.key});
+  final String categoryId;
+
+  const QuizScreen({
+    super.key,
+    this.categoryId = 'animals',
+  });
 
   @override
   State<QuizScreen> createState() => _QuizScreenState();
 }
 
 class _QuizScreenState extends State<QuizScreen> {
-  final QuizQuestionModel _question = MockDataRepository.getSampleQuizQuestion();
+  late String _activeCategoryId;
+  late QuizQuestionModel _question;
   String? _selectedChoiceId;
   int _starsCount = 12;
+
+  @override
+  void initState() {
+    super.initState();
+    _activeCategoryId = widget.categoryId;
+    _question = MockDataRepository.getQuizQuestionForCategory(_activeCategoryId);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is String && args != _activeCategoryId) {
+      setState(() {
+        _activeCategoryId = args;
+        _question = MockDataRepository.getQuizQuestionForCategory(_activeCategoryId);
+        _selectedChoiceId = null;
+      });
+    }
+  }
 
   bool get _isAnswered => _selectedChoiceId != null;
   bool get _isCorrect => _selectedChoiceId == _question.correctChoiceId;
 
+  FeedbackState get _feedbackState {
+    if (!_isAnswered) return FeedbackState.neutral;
+    return _isCorrect ? FeedbackState.correct : FeedbackState.gentleCorrection;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+
+    String feedbackTitle;
+    String feedbackSubtitle;
+    int earnedStars;
+
+    switch (_feedbackState) {
+      case FeedbackState.correct:
+        feedbackTitle = l10n.text('feedback_correct_title');
+        feedbackSubtitle = l10n.text('feedback_correct_subtitle');
+        earnedStars = 3;
+        break;
+      case FeedbackState.gentleCorrection:
+        feedbackTitle = l10n.text('feedback_gentle_retry_title');
+        feedbackSubtitle = l10n.text('feedback_gentle_retry_subtitle');
+        earnedStars = 1;
+        break;
+      case FeedbackState.neutral:
+        feedbackTitle = l10n.text('feedback_great_job');
+        feedbackSubtitle = l10n.text('feedback_you_can_do_it');
+        earnedStars = 0;
+        break;
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -208,16 +263,12 @@ class _QuizScreenState extends State<QuizScreen> {
                 ),
               ),
               const SizedBox(height: AppDimensions.spaceM),
-              // Positive Reinforcement Feedback Banner
+              // Positive Reinforcement or Gentle Corrective Feedback Banner (Task 10)
               FeedbackBanner(
-                isSuccess: _isAnswered && _isCorrect,
-                title: (_isAnswered && _isCorrect)
-                    ? l10n.text('feedback_excellent')
-                    : l10n.text('feedback_great_job'),
-                subtitle: (_isAnswered && _isCorrect)
-                    ? l10n.text('feedback_found_item')
-                    : l10n.text('feedback_you_can_do_it'),
-                earnedStars: (_isAnswered && _isCorrect) ? 3 : 0,
+                state: _feedbackState,
+                title: feedbackTitle,
+                subtitle: feedbackSubtitle,
+                earnedStars: earnedStars,
               ),
               const SizedBox(height: AppDimensions.spaceM),
               // Bottom Action Controls
