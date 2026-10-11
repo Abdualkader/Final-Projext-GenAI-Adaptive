@@ -5,6 +5,7 @@ import 'firebase_options.dart';
 
 import 'core/constants/app_routes.dart';
 import 'core/localization/app_localizations.dart';
+import 'core/routes/app_router.dart';
 import 'core/theme/app_theme.dart';
 
 import 'screens/child/home_screen.dart';
@@ -66,6 +67,10 @@ class _ASDLearningAppState extends State<ASDLearningApp> {
         GlobalCupertinoLocalizations.delegate,
       ],
       initialRoute: AppRoutes.childHome,
+      onGenerateRoute: (settings) => AppRouter.onGenerateRoute(
+        settings,
+        onToggleLocale: _toggleLocale,
+      ),
       routes: {
         AppRoutes.childHome: (context) =>
             HomeScreen(onToggleLocale: _toggleLocale),
@@ -89,3 +94,4 @@ class _ASDLearningAppState extends State<ASDLearningApp> {
     );
   }
 }
+

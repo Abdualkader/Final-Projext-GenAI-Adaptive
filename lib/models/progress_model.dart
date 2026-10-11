@@ -1,5 +1,58 @@
 import 'package:flutter/material.dart';
 
+/// Aggregated daily/weekly performance analytics document in Cloud Firestore.
+/// Matches schema in PROJECT_REFERENCE.md Section 5 (Collection: 'progressRecords').
+class ProgressRecordModel {
+  final String recordId;
+  final String childId;
+  final DateTime date;
+  final List<String> itemsMastered;
+  final List<double> quizScores;
+  final double overallAccuracy;
+
+  const ProgressRecordModel({
+    required this.recordId,
+    required this.childId,
+    required this.date,
+    this.itemsMastered = const [],
+    this.quizScores = const [],
+    this.overallAccuracy = 0.0,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'recordId': recordId,
+      'childId': childId,
+      'date': date.toIso8601String(),
+      'itemsMastered': itemsMastered,
+      'quizScores': quizScores,
+      'overallAccuracy': overallAccuracy,
+    };
+  }
+
+  factory ProgressRecordModel.fromMap(Map<String, dynamic> map, {String? id}) {
+    return ProgressRecordModel(
+      recordId: id ?? map['recordId'] as String? ?? '',
+      childId: map['childId'] as String? ?? '',
+      date: map['date'] != null
+          ? (map['date'] is String
+              ? DateTime.tryParse(map['date'] as String) ?? DateTime.now()
+              : DateTime.now())
+          : DateTime.now(),
+      itemsMastered: (map['itemsMastered'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+      quizScores: (map['quizScores'] as List<dynamic>?)
+              ?.map((e) => (e as num).toDouble())
+              .toList() ??
+          const [],
+      overallAccuracy: (map['overallAccuracy'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+}
+
+/// UI presentation model for an individual session item in the parent dashboard.
 class SessionRecord {
   final String id;
   final String date;
@@ -24,6 +77,7 @@ class SessionRecord {
   String localizedCategory(bool isArabic) => isArabic ? categoryAr : categoryEn;
 }
 
+/// UI presentation model for category-wise accuracy charts in the dashboard.
 class CategoryAccuracy {
   final String categoryEn;
   final String categoryAr;
@@ -42,6 +96,7 @@ class CategoryAccuracy {
   String localizedCategory(bool isArabic) => isArabic ? categoryAr : categoryEn;
 }
 
+/// Comprehensive progress model feeding the parent/educator dashboard screen.
 class StudentProgressModel {
   final String studentName;
   final int studentAge;
