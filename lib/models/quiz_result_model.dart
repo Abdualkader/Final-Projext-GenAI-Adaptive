@@ -3,6 +3,7 @@
 class QuizResultModel {
   final String resultId;
   final String sessionId;
+  final String childId;
   final String questionId;
   final String childResponse;
   final bool isCorrect;
@@ -12,6 +13,7 @@ class QuizResultModel {
   const QuizResultModel({
     required this.resultId,
     required this.sessionId,
+    this.childId = '',
     required this.questionId,
     required this.childResponse,
     required this.isCorrect,
@@ -23,6 +25,7 @@ class QuizResultModel {
     return {
       'resultId': resultId,
       'sessionId': sessionId,
+      'childId': childId,
       'questionId': questionId,
       'childResponse': childResponse,
       'isCorrect': isCorrect,
@@ -35,6 +38,7 @@ class QuizResultModel {
     return QuizResultModel(
       resultId: id ?? map['resultId'] as String? ?? '',
       sessionId: map['sessionId'] as String? ?? '',
+      childId: map['childId'] as String? ?? '',
       questionId: map['questionId'] as String? ?? '',
       childResponse: map['childResponse'] as String? ?? '',
       isCorrect: map['isCorrect'] as bool? ?? false,
@@ -44,6 +48,28 @@ class QuizResultModel {
               ? DateTime.tryParse(map['timestamp'] as String) ?? DateTime.now()
               : DateTime.now())
           : DateTime.now(),
+    );
+  }
+
+  QuizResultModel copyWith({
+    String? resultId,
+    String? sessionId,
+    String? childId,
+    String? questionId,
+    String? childResponse,
+    bool? isCorrect,
+    int? responseTimeMs,
+    DateTime? timestamp,
+  }) {
+    return QuizResultModel(
+      resultId: resultId ?? this.resultId,
+      sessionId: sessionId ?? this.sessionId,
+      childId: childId ?? this.childId,
+      questionId: questionId ?? this.questionId,
+      childResponse: childResponse ?? this.childResponse,
+      isCorrect: isCorrect ?? this.isCorrect,
+      responseTimeMs: responseTimeMs ?? this.responseTimeMs,
+      timestamp: timestamp ?? this.timestamp,
     );
   }
 }

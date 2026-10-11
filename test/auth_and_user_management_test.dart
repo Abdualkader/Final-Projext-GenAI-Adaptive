@@ -169,6 +169,24 @@ class FakeUserRepository implements UserRepository {
       );
     }
   }
+
+  @override
+  Future<void> updatePreferredLanguage(String userId, String language) async {
+    final user = _users[userId];
+    if (user != null) {
+      _users[userId] = user.copyWith(preferredLanguage: language);
+    }
+  }
+
+  @override
+  Future<List<String>> getLinkedChildIds(String parentId) async {
+    final user = _users[parentId];
+    if (user != null && user.linkedChildIds.isNotEmpty) {
+      return user.linkedChildIds;
+    }
+    final children = _children[parentId] ?? const [];
+    return children.map((c) => c.childId).toList();
+  }
 }
 
 Widget _buildTestApp(Widget child, [Locale locale = const Locale('en')]) {

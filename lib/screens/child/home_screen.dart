@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/utils/responsive_layout.dart';
+import '../../providers/category_provider.dart';
 import '../../repositories/mock_data_repository.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/category_card.dart';
@@ -26,9 +28,26 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentNavIndex = 0;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final categoryProvider =
+          Provider.of<CategoryProvider?>(context, listen: false);
+      if (categoryProvider != null && categoryProvider.categories.isEmpty) {
+        categoryProvider.loadCategories();
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final categories = MockDataRepository.getCategories();
+    final categoryProvider =
+        Provider.of<CategoryProvider?>(context, listen: true);
+    final categories = (categoryProvider != null &&
+            categoryProvider.categories.isNotEmpty)
+        ? categoryProvider.categories
+        : MockDataRepository.getCategories();
 
     return Scaffold(
       backgroundColor: AppColors.background,

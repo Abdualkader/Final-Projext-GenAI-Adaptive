@@ -4,11 +4,13 @@ import '../core/errors/app_exceptions.dart';
 /// Clean abstraction service over Cloud Firestore database operations.
 /// Prevents Firestore queries from being directly embedded in UI widgets.
 class FirestoreService {
-  static final FirestoreService _instance = FirestoreService._internal();
-  factory FirestoreService() => _instance;
-  FirestoreService._internal();
+  final FirebaseFirestore? _customFirestore;
 
-  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
+  FirestoreService({FirebaseFirestore? firestore})
+      : _customFirestore = firestore;
+
+  FirebaseFirestore get _firestore =>
+      _customFirestore ?? FirebaseFirestore.instance;
 
   /// Retrieves a single document by ID from a given collection.
   Future<DocumentSnapshot<Map<String, dynamic>>?> getDocument(
@@ -17,6 +19,8 @@ class FirestoreService {
   ) async {
     try {
       return await _firestore.collection(collection).doc(docId).get();
+    } on FirebaseException catch (e) {
+      _handleFirebaseException('$collection/$docId', e);
     } catch (e) {
       throw NetworkException(
         message: 'Failed to retrieve document from $collection/$docId: $e',
@@ -37,6 +41,8 @@ class FirestoreService {
           .collection(collection)
           .doc(docId)
           .set(data, SetOptions(merge: merge));
+    } on FirebaseException catch (e) {
+      _handleFirebaseException('$collection/$docId', e);
     } catch (e) {
       throw NetworkException(
         message: 'Failed to set document in $collection/$docId: $e',
@@ -52,6 +58,8 @@ class FirestoreService {
   ) async {
     try {
       return await _firestore.collection(collection).add(data);
+    } on FirebaseException catch (e) {
+      _handleFirebaseException(collection, e);
     } catch (e) {
       throw NetworkException(
         message: 'Failed to add document to $collection: $e',
@@ -68,6 +76,8 @@ class FirestoreService {
   ) async {
     try {
       await _firestore.collection(collection).doc(docId).update(data);
+    } on FirebaseException catch (e) {
+      _handleFirebaseException('$collection/$docId', e);
     } catch (e) {
       throw NetworkException(
         message: 'Failed to update document in $collection/$docId: $e',
@@ -80,6 +90,8 @@ class FirestoreService {
   Future<void> deleteDocument(String collection, String docId) async {
     try {
       await _firestore.collection(collection).doc(docId).delete();
+    } on FirebaseException catch (e) {
+      _handleFirebaseException('$collection/$docId', e);
     } catch (e) {
       throw NetworkException(
         message: 'Failed to delete document from $collection/$docId: $e',
@@ -104,6 +116,54 @@ class FirestoreService {
         query = query.limit(limit);
       }
       return await query.get();
+    } on FirebaseException catch (e) {
+      _handleFirebaseException(collection, e);
+    } catch (e) {
+      throw NetworkException(
+        message: 'Failed to query collection $collection: $e',
+        originalError: e,
+      );
+    }
+  }
+
+  /// Queries documents in a collection with equality filters, range bounds, ordering, and limit.
+  Future<QuerySnapshot<Map<String, dynamic>>> queryCollection(
+    String collection, {
+    Map<String, dynamic>? whereEquals,
+    String? whereLessThanOrEqualToField,
+    dynamic whereLessThanOrEqualToValue,
+    String? orderByField,
+    bool descending = false,
+    int? limit,
+  }) async {
+    try {
+      Query<Map<String, dynamic>> query = _firestore.collection(collection);
+
+      if (whereEquals != null) {
+        whereEquals.forEach((field, value) {
+          query = query.where(field, isEqualTo: value);
+        });
+      }
+
+      if (whereLessThanOrEqualToField != null &&
+          whereLessThanOrEqualToValue != null) {
+        query = query.where(
+          whereLessThanOrEqualToField,
+          isLessThanOrEqualTo: whereLessThanOrEqualToValue,
+        );
+      }
+
+      if (orderByField != null) {
+        query = query.orderBy(orderByField, descending: descending);
+      }
+
+      if (limit != null) {
+        query = query.limit(limit);
+      }
+
+      return await query.get();
+    } on FirebaseException catch (e) {
+      _handleFirebaseException(collection, e);
     } catch (e) {
       throw NetworkException(
         message: 'Failed to query collection $collection: $e',
@@ -123,5 +183,30 @@ class FirestoreService {
       query = query.orderBy(orderByField, descending: descending);
     }
     return query.snapshots();
+  }
+
+  Never _handleFirebaseException(String target, FirebaseException e) {
+    if (e.code == 'permission-denied') {
+      throw AppException(
+        code: 'PERMISSION_DENIED',
+        message: 'Permission denied accessing $target: ${e.message ?? e.code}',
+        originalError: e,
+      );
+    } else if (e.code == 'unavailable') {
+      throw NetworkException(
+        message: 'Firestore service is currently unavailable. Please check your connection.',
+        originalError: e,
+      );
+    } else if (e.code == 'not-found') {
+      throw AppException(
+        code: 'NOT_FOUND',
+        message: 'Resource $target was not found in Firestore.',
+        originalError: e,
+      );
+    }
+    throw NetworkException(
+      message: 'Firestore operation failed on $target (${e.code}): ${e.message}',
+      originalError: e,
+    );
   }
 }

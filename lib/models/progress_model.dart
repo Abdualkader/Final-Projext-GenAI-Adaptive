@@ -50,6 +50,24 @@ class ProgressRecordModel {
       overallAccuracy: (map['overallAccuracy'] as num?)?.toDouble() ?? 0.0,
     );
   }
+
+  ProgressRecordModel copyWith({
+    String? recordId,
+    String? childId,
+    DateTime? date,
+    List<String>? itemsMastered,
+    List<double>? quizScores,
+    double? overallAccuracy,
+  }) {
+    return ProgressRecordModel(
+      recordId: recordId ?? this.recordId,
+      childId: childId ?? this.childId,
+      date: date ?? this.date,
+      itemsMastered: itemsMastered ?? this.itemsMastered,
+      quizScores: quizScores ?? this.quizScores,
+      overallAccuracy: overallAccuracy ?? this.overallAccuracy,
+    );
+  }
 }
 
 /// UI presentation model for an individual session item in the parent dashboard.

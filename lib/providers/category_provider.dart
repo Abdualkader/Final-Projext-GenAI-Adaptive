@@ -34,7 +34,9 @@ class CategoryProvider extends ChangeNotifier {
       }
     } catch (e) {
       _uiState = UiState.error(
-        AppException(message: 'Failed to load categories: $e'),
+        e is AppException
+            ? e
+            : AppException(message: 'Failed to load categories: $e'),
       );
     }
     notifyListeners();

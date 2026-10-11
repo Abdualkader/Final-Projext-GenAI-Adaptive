@@ -57,7 +57,9 @@ class VocabularyProvider extends ChangeNotifier {
       }
     } catch (e) {
       _uiState = UiState.error(
-        AppException(message: 'Failed to load vocabulary items: $e'),
+        e is AppException
+            ? e
+            : AppException(message: 'Failed to load vocabulary items: $e'),
       );
     }
     notifyListeners();

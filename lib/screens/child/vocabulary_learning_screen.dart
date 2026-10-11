@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/utils/responsive_layout.dart';
 import '../../models/vocabulary_item_model.dart';
+import '../../providers/vocabulary_provider.dart';
 import '../../repositories/mock_data_repository.dart';
 import '../../widgets/large_icon_button.dart';
 import '../../widgets/vocabulary_card.dart';
@@ -35,6 +37,14 @@ class _VocabularyLearningScreenState extends State<VocabularyLearningScreen> {
     super.initState();
     _activeCategoryId = widget.categoryId;
     _items = MockDataRepository.getVocabularyForCategory(_activeCategoryId);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final vocabProvider =
+          Provider.of<VocabularyProvider?>(context, listen: false);
+      if (vocabProvider != null) {
+        vocabProvider.loadVocabulary(_activeCategoryId);
+      }
+    });
   }
 
   @override
@@ -47,6 +57,11 @@ class _VocabularyLearningScreenState extends State<VocabularyLearningScreen> {
         _items = MockDataRepository.getVocabularyForCategory(_activeCategoryId);
         _currentIndex = 0;
       });
+      final vocabProvider =
+          Provider.of<VocabularyProvider?>(context, listen: false);
+      if (vocabProvider != null) {
+        vocabProvider.loadVocabulary(_activeCategoryId);
+      }
     }
   }
 
@@ -81,9 +96,17 @@ class _VocabularyLearningScreenState extends State<VocabularyLearningScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final currentItem = _items[_currentIndex];
-    final totalCount = _items.length;
-    final progressFraction = (_currentIndex + 1) / totalCount;
+    final vocabProvider =
+        Provider.of<VocabularyProvider?>(context, listen: true);
+    final activeItems = (vocabProvider != null &&
+            vocabProvider.items.isNotEmpty &&
+            vocabProvider.currentCategoryId == _activeCategoryId)
+        ? vocabProvider.items
+        : _items;
+    final safeIndex = _currentIndex.clamp(0, activeItems.length - 1);
+    final currentItem = activeItems[safeIndex];
+    final totalCount = activeItems.length;
+    final progressFraction = (safeIndex + 1) / totalCount;
 
     return Scaffold(
       backgroundColor: AppColors.background,
