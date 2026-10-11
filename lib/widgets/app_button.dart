@@ -5,7 +5,7 @@ import '../core/constants/app_dimensions.dart';
 /// Primary accessible button adhering to the 48dp+ touch target standard.
 class AppButton extends StatelessWidget {
   final String label;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final IconData? icon;
   final Color backgroundColor;
   final Color foregroundColor;
@@ -15,7 +15,7 @@ class AppButton extends StatelessWidget {
   const AppButton({
     super.key,
     required this.label,
-    required this.onPressed,
+    this.onPressed,
     this.icon,
     this.backgroundColor = AppColors.primaryBlue,
     this.foregroundColor = Colors.white,

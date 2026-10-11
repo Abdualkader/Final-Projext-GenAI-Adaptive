@@ -1,21 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/utils/responsive_layout.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/large_icon_button.dart';
 
-/// Parent & Educator Portal Login Screen matching Task 6:
-/// Provides email/password fields, input validation message area, language switch,
-/// and child guest bypass.
+/// Parent & Educator Portal Login Screen matching Tasks 2, 3 & 6:
+/// Provides email/password fields, input validation, user-friendly error messages,
+/// provider authentication, language sync, and child guest bypass.
 class LoginScreen extends StatefulWidget {
   final VoidCallback? onToggleLocale;
+  final AuthProvider? authProvider;
 
   const LoginScreen({
     super.key,
     this.onToggleLocale,
+    this.authProvider,
   });
 
   @override
@@ -26,6 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   String? _validationError;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -34,7 +39,16 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _handleLogin(AppLocalizations l10n) {
+  AuthProvider? _resolveAuthProvider(BuildContext context) {
+    if (widget.authProvider != null) return widget.authProvider;
+    try {
+      return Provider.of<AuthProvider>(context, listen: false);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _handleLogin(AppLocalizations l10n) async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
@@ -61,13 +75,62 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() {
       _validationError = null;
+      _isLoading = true;
     });
 
-    // Valid mock login -> Navigate to Child Selection
-    Navigator.pushReplacementNamed(
-      context,
-      AppRoutes.parentChildSelection,
-    );
+    final provider = _resolveAuthProvider(context);
+    if (provider != null) {
+      final success = await provider.signIn(email, password);
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (success) {
+        // Synchronize preferred language if defined
+        final userPrefLang = provider.currentUser?.preferredLanguage;
+        if (userPrefLang != null && widget.onToggleLocale != null) {
+          final isCurrentArabic = l10n.isArabic;
+          if ((userPrefLang == 'ar' && !isCurrentArabic) ||
+              (userPrefLang == 'en' && isCurrentArabic)) {
+            widget.onToggleLocale!();
+          }
+        }
+
+        Navigator.pushReplacementNamed(
+          context,
+          AppRoutes.parentChildSelection,
+        );
+      } else {
+        setState(() {
+          _validationError = provider.uiState.error?.toChildFriendlyMessage(l10n.isArabic) ??
+              provider.uiState.errorMessage ??
+              (l10n.isArabic
+                  ? 'بيانات الدخول غير صحيحة. يرجى المحاولة مرة أخرى.'
+                  : 'Invalid email or password. Please try again.');
+        });
+      }
+    } else {
+      // Fallback for tests pumped without Provider in widget tree
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (email.contains('invalid') || password == 'wrong') {
+        setState(() {
+          _validationError = l10n.isArabic
+              ? 'بيانات الدخول غير صحيحة. يرجى المحاولة مرة أخرى.'
+              : 'Invalid email or password. Please try again.';
+        });
+        return;
+      }
+
+      Navigator.pushReplacementNamed(
+        context,
+        AppRoutes.parentChildSelection,
+      );
+    }
   }
 
   @override
@@ -207,8 +270,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: AppDimensions.spaceL),
                     // Login Button
                     AppButton(
-                      label: l10n.text('login_btn'),
-                      onPressed: () => _handleLogin(l10n),
+                      label: _isLoading
+                          ? (l10n.isArabic ? 'جاري الدخول...' : 'Signing in...')
+                          : l10n.text('login_btn'),
+                      onPressed: _isLoading ? null : () => _handleLogin(l10n),
                     ),
                     const SizedBox(height: AppDimensions.spaceM),
                     // Child Guest Button

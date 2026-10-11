@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../providers/auth_provider.dart';
 import '../../screens/child/category_selection_screen.dart';
 import '../../screens/child/home_screen.dart';
 import '../../screens/child/quiz_screen.dart';
@@ -19,6 +20,7 @@ class AppRouter {
     RouteSettings settings, {
     VoidCallback? onToggleLocale,
     bool isAuthenticated = false,
+    AuthProvider? authProvider,
   }) {
     final routeName = settings.name ?? AppRoutes.childHome;
 
@@ -26,7 +28,10 @@ class AppRouter {
     if (RouteGuard.isProtected(routeName) && !isAuthenticated) {
       return MaterialPageRoute(
         settings: settings,
-        builder: (_) => LoginScreen(onToggleLocale: onToggleLocale),
+        builder: (_) => LoginScreen(
+          onToggleLocale: onToggleLocale,
+          authProvider: authProvider,
+        ),
       );
     }
 
@@ -63,13 +68,16 @@ class AppRouter {
       case AppRoutes.parentLogin:
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) => LoginScreen(onToggleLocale: onToggleLocale),
+          builder: (_) => LoginScreen(
+            onToggleLocale: onToggleLocale,
+            authProvider: authProvider,
+          ),
         );
 
       case AppRoutes.parentChildSelection:
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) => const ChildSelectionScreen(),
+          builder: (_) => ChildSelectionScreen(authProvider: authProvider),
         );
 
       case AppRoutes.parentDashboard:

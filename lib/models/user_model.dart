@@ -4,9 +4,10 @@ class UserModel {
   final String userId;
   final String email;
   final String? displayName;
-  final String role; // 'parent' | 'educator'
+  final String role; // 'parent' | 'educator' | 'child'
   final String preferredLanguage; // 'ar' | 'en'
   final List<String> linkedChildIds;
+  final int difficultyLevel;
   final DateTime createdAt;
 
   const UserModel({
@@ -16,11 +17,13 @@ class UserModel {
     this.role = 'parent',
     this.preferredLanguage = 'en',
     this.linkedChildIds = const [],
+    this.difficultyLevel = 1,
     required this.createdAt,
   });
 
   bool get isEducator => role == 'educator';
   bool get isParent => role == 'parent';
+  bool get isChild => role == 'child';
 
   Map<String, dynamic> toMap() {
     return {
@@ -30,6 +33,7 @@ class UserModel {
       'role': role,
       'preferredLanguage': preferredLanguage,
       'linkedChildIds': linkedChildIds,
+      'difficultyLevel': difficultyLevel,
       'createdAt': createdAt.toIso8601String(),
     };
   }
@@ -45,6 +49,7 @@ class UserModel {
               ?.map((e) => e.toString())
               .toList() ??
           const [],
+      difficultyLevel: (map['difficultyLevel'] as num?)?.toInt() ?? 1,
       createdAt: map['createdAt'] != null
           ? (map['createdAt'] is String
               ? DateTime.parse(map['createdAt'] as String)
@@ -60,6 +65,7 @@ class UserModel {
     String? role,
     String? preferredLanguage,
     List<String>? linkedChildIds,
+    int? difficultyLevel,
     DateTime? createdAt,
   }) {
     return UserModel(
@@ -69,6 +75,7 @@ class UserModel {
       role: role ?? this.role,
       preferredLanguage: preferredLanguage ?? this.preferredLanguage,
       linkedChildIds: linkedChildIds ?? this.linkedChildIds,
+      difficultyLevel: difficultyLevel ?? this.difficultyLevel,
       createdAt: createdAt ?? this.createdAt,
     );
   }

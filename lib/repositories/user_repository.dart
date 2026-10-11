@@ -37,7 +37,8 @@ class BaseUserRepository implements UserRepository {
         displayName: 'Adam Parent',
         role: 'parent',
         preferredLanguage: 'en',
-        linkedChildIds: const ['child_adam'],
+        linkedChildIds: const ['child_adam', 'child_sara', 'child_omar'],
+        difficultyLevel: 1,
         createdAt: DateTime.now(),
       );
     }
@@ -64,7 +65,7 @@ class BaseUserRepository implements UserRepository {
           .toList();
       if (list.isNotEmpty) return list;
     } catch (_) {
-      // Fallback sample child profile
+      // Fallback sample child profiles for offline / tests
     }
 
     return [
@@ -77,6 +78,24 @@ class BaseUserRepository implements UserRepository {
         preferredLanguage: 'en',
         createdAt: DateTime.now(),
       ),
+      ChildModel(
+        childId: 'child_sara',
+        parentId: parentId,
+        name: 'Sara',
+        birthDate: DateTime.now().subtract(const Duration(days: 365 * 6)),
+        currentDifficultyLevel: 2,
+        preferredLanguage: 'en',
+        createdAt: DateTime.now(),
+      ),
+      ChildModel(
+        childId: 'child_omar',
+        parentId: parentId,
+        name: 'Omar',
+        birthDate: DateTime.now().subtract(const Duration(days: 365 * 5)),
+        currentDifficultyLevel: 2,
+        preferredLanguage: 'ar',
+        createdAt: DateTime.now(),
+      ),
     ];
   }
 
@@ -87,5 +106,10 @@ class BaseUserRepository implements UserRepository {
       child.childId,
       child.toMap(),
     );
+    final user = await getUserById(parentId);
+    if (user != null && !user.linkedChildIds.contains(child.childId)) {
+      final updatedChildIds = [...user.linkedChildIds, child.childId];
+      await saveUser(user.copyWith(linkedChildIds: updatedChildIds));
+    }
   }
 }

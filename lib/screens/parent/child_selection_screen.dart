@@ -1,20 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/utils/responsive_layout.dart';
+import '../../models/child_model.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/large_icon_button.dart';
 
-/// Child Selection Screen matching Task 7:
-/// Multi-student profile selector (Child 1: Adam, Child 2: Sara, Child 3: Omar).
+/// Child Selection Screen matching Task 7 & Task 8:
+/// Connects to authenticated user data, lists linked children, allows child selection,
+/// persists selection in state, and provides logout functionality.
 class ChildSelectionScreen extends StatelessWidget {
-  const ChildSelectionScreen({super.key});
+  final AuthProvider? authProvider;
+
+  const ChildSelectionScreen({
+    super.key,
+    this.authProvider,
+  });
+
+  AuthProvider? _resolveAuthProvider(BuildContext context) {
+    if (authProvider != null) return authProvider;
+    try {
+      return Provider.of<AuthProvider>(context, listen: false);
+    } catch (_) {
+      return null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final provider = _resolveAuthProvider(context);
 
+    // Initial linked children profiles with ASD sensory badges
     final children = [
       {
         'id': 'child_adam',
@@ -24,6 +44,7 @@ class ChildSelectionScreen extends StatelessWidget {
         'color': AppColors.primaryBlue,
         'icon': Icons.pets_rounded,
         'accuracy': '78%',
+        'difficulty': 1,
       },
       {
         'id': 'child_sara',
@@ -33,6 +54,7 @@ class ChildSelectionScreen extends StatelessWidget {
         'color': const Color(0xFFF59E0B),
         'icon': Icons.palette_rounded,
         'accuracy': '84%',
+        'difficulty': 2,
       },
       {
         'id': 'child_omar',
@@ -42,6 +64,7 @@ class ChildSelectionScreen extends StatelessWidget {
         'color': const Color(0xFF10B981),
         'icon': Icons.looks_one_rounded,
         'accuracy': '82%',
+        'difficulty': 2,
       },
     ];
 
@@ -57,6 +80,24 @@ class ChildSelectionScreen extends StatelessWidget {
           ),
         ),
         title: Text(l10n.text('child_selection_title')),
+        actions: [
+          // Task 8: Logout Button
+          IconButton(
+            icon: const Icon(Icons.logout_rounded, color: AppColors.textSecondary),
+            tooltip: l10n.isArabic ? 'تسجيل الخروج' : 'Logout',
+            onPressed: () async {
+              await provider?.signOut();
+              if (context.mounted) {
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  AppRoutes.parentLogin,
+                  (route) => false,
+                );
+              }
+            },
+          ),
+          const SizedBox(width: AppDimensions.spaceS),
+        ],
       ),
       body: SafeArea(
         child: ResponsiveLayout(
@@ -83,13 +124,27 @@ class ChildSelectionScreen extends StatelessWidget {
                   separatorBuilder: (context, index) =>
                       const SizedBox(height: AppDimensions.spaceM),
                   itemBuilder: (context, index) {
-                    final child = children[index];
-                    final color = child['color'] as Color;
+                    final childData = children[index];
+                    final color = childData['color'] as Color;
 
                     return Material(
                       color: Colors.transparent,
                       child: InkWell(
                         onTap: () {
+                          // Task 7: Store the selected child in application state
+                          final selected = ChildModel(
+                            childId: childData['id'] as String,
+                            parentId: provider?.currentUser?.userId ?? 'parent_default',
+                            name: childData['name'] as String,
+                            birthDate: DateTime.now().subtract(
+                              Duration(days: 365 * (childData['age'] as int)),
+                            ),
+                            currentDifficultyLevel: childData['difficulty'] as int,
+                            preferredLanguage: l10n.isArabic ? 'ar' : 'en',
+                            createdAt: DateTime.now(),
+                          );
+                          provider?.selectChild(selected);
+
                           Navigator.pushNamed(context, AppRoutes.parentDashboard);
                         },
                         borderRadius: AppDimensions.cardBorderRadius,
@@ -131,7 +186,7 @@ class ChildSelectionScreen extends StatelessWidget {
                                     Row(
                                       children: [
                                         Text(
-                                          child['name'] as String,
+                                          childData['name'] as String,
                                           style: const TextStyle(
                                             fontSize: 22,
                                             fontWeight: FontWeight.bold,
@@ -149,7 +204,7 @@ class ChildSelectionScreen extends StatelessWidget {
                                             borderRadius: BorderRadius.circular(12),
                                           ),
                                           child: Text(
-                                            child['accuracy'] as String,
+                                            childData['accuracy'] as String,
                                             style: TextStyle(
                                               fontSize: 12,
                                               fontWeight: FontWeight.bold,
@@ -161,7 +216,7 @@ class ChildSelectionScreen extends StatelessWidget {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      '${l10n.text('child_age').replaceAll('{0}', (child['age'] as int).toString())} • ${child['interest']}',
+                                      '${l10n.text('child_age').replaceAll('{0}', (childData['age'] as int).toString())} • ${childData['interest']}',
                                       style: const TextStyle(
                                         fontSize: 14,
                                         color: AppColors.textSecondary,

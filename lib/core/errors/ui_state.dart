@@ -64,6 +64,8 @@ class UiState<T> {
   bool get isEmpty => status == UiStatus.empty;
   bool get isError => status == UiStatus.error;
 
+  String? get errorMessage => customErrorMessage ?? error?.message;
+
   String getDisplayError(bool isArabic, {bool isChildMode = false}) {
     if (isChildMode) {
       return error?.toChildFriendlyMessage(isArabic) ??

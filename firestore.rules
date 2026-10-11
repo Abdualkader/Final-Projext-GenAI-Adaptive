@@ -13,39 +13,49 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Users collection: parents and educators
+    // Users collection: parents and educators only have access to their own profile
+    // Sensitive credentials/passwords must NEVER be stored here
     match /users/{userId} {
       allow read, write: if isOwner(userId);
     }
+
+    // Children collection: parents/educators only access their linked children
+    match /children/{childId} {
+      allow read, write: if isAuthenticated() && (
+        resource == null || 
+        resource.data.parentId == request.auth.uid || 
+        request.resource.data.parentId == request.auth.uid
+      );
+    }
     
-    // Categories: public read, admin/functions write
+    // Categories: public read for student learning, authenticated write
     match /categories/{categoryId} {
       allow read: if true;
       allow write: if isAuthenticated();
     }
     
-    // Vocabulary items: public read, admin/functions write
+    // Vocabulary items: public read for student learning, authenticated write
     match /vocabularyItems/{itemId} {
       allow read: if true;
       allow write: if isAuthenticated();
     }
     
-    // Learning sessions: authenticated users
+    // Learning sessions: authenticated parents and educator telemetry
     match /sessions/{sessionId} {
       allow read, write: if isAuthenticated();
     }
     
-    // Quiz results: authenticated users
+    // Quiz results: authenticated parents and educator telemetry
     match /quizResults/{resultId} {
       allow read, write: if isAuthenticated();
     }
     
-    // Progress records: authenticated users
+    // Progress records: authenticated parents and educator dashboards
     match /progressRecords/{recordId} {
       allow read, write: if isAuthenticated();
     }
 
-    // Health check / connectivity test document
+    // Health check / connectivity diagnostics document
     match /_system_health/{docId} {
       allow read, write: if true;
     }
