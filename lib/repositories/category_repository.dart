@@ -1,4 +1,5 @@
 import '../core/constants/firebase_collections.dart';
+import '../core/utils/content_validator.dart';
 import '../models/category_model.dart';
 import '../services/firestore_service.dart';
 import '../services/sample_data_service.dart';
@@ -26,36 +27,47 @@ class BaseCategoryRepository implements CategoryRepository {
         orderByField: 'orderIndex',
       );
       if (snapshot.docs.isNotEmpty) {
-        return snapshot.docs
+        final list = snapshot.docs
             .map((doc) => CategoryModel.fromMap(doc.data(), id: doc.id))
             .toList();
+        return ContentValidator.filterValidCategories(list);
       }
     } catch (_) {
       // Offline fallback to sample categories
     }
 
-    return _inMemoryCategories;
+    return ContentValidator.filterValidCategories(_inMemoryCategories);
   }
 
   @override
   Future<CategoryModel?> getCategoryById(String categoryId) async {
-    try {
-      final doc = await _firestoreService.getDocument(
-        FirebaseCollections.categories,
-        categoryId,
-      );
-      if (doc != null && doc.exists && doc.data() != null) {
-        return CategoryModel.fromMap(doc.data()!, id: doc.id);
+    final searchIds = (categoryId == 'colors' || categoryId == 'colours')
+        ? ['colours', 'colors']
+        : [categoryId];
+
+    for (final id in searchIds) {
+      try {
+        final doc = await _firestoreService.getDocument(
+          FirebaseCollections.categories,
+          id,
+        );
+        if (doc != null && doc.exists && doc.data() != null) {
+          final model = CategoryModel.fromMap(doc.data()!, id: doc.id);
+          if (model.isValid) return model;
+        }
+      } catch (_) {
+        // Fallback
       }
-    } catch (_) {
-      // Fallback
+
+      try {
+        final match = _inMemoryCategories.firstWhere((c) => c.id == id);
+        if (match.isValid) return match;
+      } catch (_) {
+        // Continue searching
+      }
     }
 
-    try {
-      return _inMemoryCategories.firstWhere((c) => c.id == categoryId);
-    } catch (_) {
-      return null;
-    }
+    return null;
   }
 
   @override

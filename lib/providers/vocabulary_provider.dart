@@ -1,21 +1,26 @@
 import 'package:flutter/foundation.dart';
 import '../core/errors/app_exceptions.dart';
 import '../core/errors/ui_state.dart';
+import '../core/utils/content_validator.dart';
 import '../models/vocabulary_item_model.dart';
 import '../repositories/vocabulary_repository.dart';
 import '../services/audio_service.dart';
+import '../services/storage_service.dart';
 
 /// State management controller for vocabulary presentation, batch cycling, and audio pronunciation.
 class VocabularyProvider extends ChangeNotifier {
   final VocabularyRepository _vocabularyRepository;
   final AudioService _audioService;
+  final StorageService _storageService;
 
   VocabularyProvider({
     VocabularyRepository? vocabularyRepository,
     AudioService? audioService,
+    StorageService? storageService,
   })  : _vocabularyRepository =
             vocabularyRepository ?? BaseVocabularyRepository(),
-        _audioService = audioService ?? AudioService();
+        _audioService = audioService ?? AudioService(),
+        _storageService = storageService ?? StorageService();
 
   UiState<List<VocabularyItemModel>> _uiState = const UiState.initial();
   List<VocabularyItemModel> _items = [];
@@ -49,11 +54,12 @@ class VocabularyProvider extends ChangeNotifier {
         categoryId,
         maxDifficulty: maxDifficulty,
       );
-      _items = list;
-      if (list.isEmpty) {
+      final validList = ContentValidator.filterValidItems(list);
+      _items = validList;
+      if (validList.isEmpty) {
         _uiState = const UiState.empty();
       } else {
-        _uiState = UiState.success(list);
+        _uiState = UiState.success(validList);
       }
     } catch (e) {
       _uiState = UiState.error(
@@ -81,21 +87,38 @@ class VocabularyProvider extends ChangeNotifier {
     }
   }
 
+  /// Sets the active item by index.
+  void goToIndex(int index) {
+    if (index >= 0 && index < _items.length) {
+      _currentIndex = index;
+      notifyListeners();
+    }
+  }
+
   /// Plays pronunciation audio for the active vocabulary item.
   Future<void> playCurrentAudio(bool isArabic) async {
     final item = currentItem;
     if (item == null) return;
+    await playAudioFor(item, isArabic: isArabic);
+  }
 
-    final path = isArabic ? item.audioUrlAr : item.audioUrlEn;
-    if (path.isEmpty) return;
+  /// Plays pronunciation audio for a specific vocabulary item.
+  /// Handles missing audio gracefully without throwing or crashing (Task 12).
+  Future<void> playAudioFor(VocabularyItemModel item, {required bool isArabic}) async {
+    final rawPath = isArabic ? item.audioUrlAr : item.audioUrlEn;
+    if (rawPath.trim().isEmpty) {
+      debugPrint('VocabularyProvider: No audio configured for ${item.id} (${isArabic ? "ar" : "en"})');
+      return;
+    }
 
     _isPlayingAudio = true;
     notifyListeners();
 
     try {
-      await _audioService.playVocabularyAudio(path);
+      final resolvedUrl = await _storageService.getDownloadUrl(rawPath);
+      await _audioService.playVocabularyAudio(resolvedUrl);
     } catch (e) {
-      debugPrint('VocabularyProvider audio playback notice: $e');
+      debugPrint('VocabularyProvider audio playback notice (gracefully handled): $e');
     } finally {
       _isPlayingAudio = false;
       notifyListeners();

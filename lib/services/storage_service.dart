@@ -82,6 +82,36 @@ class StorageService {
     return getDownloadUrl(path);
   }
 
+  /// Builds the standard Storage path for a category image (Task 5 & 6).
+  String getVocabularyImagePath({
+    required String categoryId,
+    required String fileName,
+  }) {
+    final cat = (categoryId == 'colors' || categoryId == 'colours')
+        ? 'colors'
+        : categoryId.toLowerCase();
+    return 'storage/vocabulary/$cat/$fileName';
+  }
+
+  /// Builds the standard Storage path for bilingual vocabulary audio (Task 6).
+  String getVocabularyAudioPath({
+    required String categoryId,
+    required String fileName,
+    required bool isArabic,
+  }) {
+    final cat = (categoryId == 'colors' || categoryId == 'colours')
+        ? 'colors'
+        : categoryId.toLowerCase();
+    final lang = isArabic ? 'ar' : 'en';
+    return 'storage/vocabulary/$cat/audio/$lang/$fileName';
+  }
+
+  /// General media resolver that seamlessly handles HTTP URLs, local asset paths,
+  /// and Firebase Storage bucket paths.
+  Future<String> resolveMediaUrl(String pathOrUrl) async {
+    return getDownloadUrl(pathOrUrl);
+  }
+
   /// Uploads binary bytes (e.g. child drawing or audio clip) to Cloud Storage.
   Future<String> uploadBytes(
     String destinationPath,

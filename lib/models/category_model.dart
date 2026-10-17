@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/constants/app_colors.dart';
+import '../core/utils/content_validator.dart';
+import '../core/utils/ui_helpers.dart';
 
 /// Represents a vocabulary learning category (e.g. Animals, Colours, Numbers, Letters).
 /// Compatible with Firestore schema in PROJECT_REFERENCE.md (Collection: 'categories').
@@ -31,6 +33,9 @@ class CategoryModel {
   /// CategoryId alias for Firestore database schema alignment.
   String get categoryId => id;
 
+  /// Content validation status conforming to Week 8 specifications.
+  bool get isValid => ContentValidator.isValidCategory(this);
+
   String localizedName(bool isArabic) => isArabic ? nameAr : nameEn;
 
   Map<String, dynamic> toMap() {
@@ -46,17 +51,28 @@ class CategoryModel {
 
   factory CategoryModel.fromMap(Map<String, dynamic> map, {String? id}) {
     final catId = id ?? map['categoryId'] as String? ?? map['id'] as String? ?? '';
+    final normalized = (catId == 'colors' || catId == 'colours') ? 'colours' : catId;
+    final defaultKey = normalized == 'colours'
+        ? 'rainbow'
+        : normalized == 'numbers'
+            ? 'numbers_123'
+            : normalized == 'letters'
+                ? 'letters_abc'
+                : 'dog';
+
     return CategoryModel(
       id: catId,
       nameEn: map['nameEn'] as String? ?? '',
       nameAr: map['nameAr'] as String? ?? '',
       iconUrl: map['iconUrl'] as String? ?? '',
       orderIndex: (map['orderIndex'] as num?)?.toInt() ?? 0,
-      illustrationKey: map['illustrationKey'] as String? ?? '',
-      backgroundColor: AppColors.cardAnimals,
-      textColor: AppColors.textAnimals,
-      borderColor: AppColors.borderAnimals,
-      icon: Icons.category_rounded,
+      illustrationKey: (map['illustrationKey'] as String?)?.isNotEmpty == true
+          ? map['illustrationKey'] as String
+          : defaultKey,
+      backgroundColor: UiHelpers.getCategoryBackgroundColor(catId),
+      textColor: UiHelpers.getCategoryTextColor(catId),
+      borderColor: UiHelpers.getCategoryBorderColor(catId),
+      icon: UiHelpers.getCategoryIcon(catId),
     );
   }
 }

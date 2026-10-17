@@ -1,4 +1,5 @@
 import '../core/constants/firebase_collections.dart';
+import '../core/utils/content_validator.dart';
 import '../models/vocabulary_item_model.dart';
 import '../services/firestore_service.dart';
 import '../services/sample_data_service.dart';
@@ -43,19 +44,21 @@ class BaseVocabularyRepository implements VocabularyRepository {
         final items = snapshot.docs
             .map((doc) => VocabularyItemModel.fromMap(doc.data(), id: doc.id))
             .toList();
+        final validItems = ContentValidator.filterValidItems(items);
         if (maxDifficulty != null) {
-          return items.where((i) => i.difficultyLevel <= maxDifficulty).toList();
+          return validItems.where((i) => i.difficultyLevel <= maxDifficulty).toList();
         }
-        return items;
+        return validItems;
       }
     } catch (_) {
       // Offline fallback
     }
 
+    final validFallback = ContentValidator.filterValidItems(_inMemoryItems);
     if (maxDifficulty != null) {
-      return _inMemoryItems.where((i) => i.difficultyLevel <= maxDifficulty).toList();
+      return validFallback.where((i) => i.difficultyLevel <= maxDifficulty).toList();
     }
-    return _inMemoryItems;
+    return validFallback;
   }
 
   @override
@@ -63,31 +66,41 @@ class BaseVocabularyRepository implements VocabularyRepository {
     String categoryId, {
     int? maxDifficulty,
   }) async {
+    final searchIds = (categoryId == 'colors' || categoryId == 'colours')
+        ? ['colours', 'colors']
+        : [categoryId];
+
     try {
-      final snapshot = await _firestoreService.queryCollection(
+      // Query Firestore collection
+      final snapshot = await _firestoreService.getCollection(
         FirebaseCollections.vocabularyItems,
-        whereEquals: {'categoryId': categoryId},
       );
       if (snapshot.docs.isNotEmpty) {
-        final items = snapshot.docs
+        final allItems = snapshot.docs
             .map((doc) => VocabularyItemModel.fromMap(doc.data(), id: doc.id))
+            .where((i) => searchIds.contains(i.categoryId))
             .toList();
-        if (maxDifficulty != null) {
-          return items.where((i) => i.difficultyLevel <= maxDifficulty).toList();
+
+        final valid = ContentValidator.filterValidItems(allItems);
+        if (valid.isNotEmpty) {
+          if (maxDifficulty != null) {
+            return valid.where((i) => i.difficultyLevel <= maxDifficulty).toList();
+          }
+          return valid;
         }
-        return items;
       }
     } catch (_) {
       // Offline fallback
     }
 
     final items = _inMemoryItems
-        .where((i) => i.categoryId == categoryId)
+        .where((i) => searchIds.contains(i.categoryId))
         .toList();
+    final validItems = ContentValidator.filterValidItems(items);
     if (maxDifficulty != null) {
-      return items.where((i) => i.difficultyLevel <= maxDifficulty).toList();
+      return validItems.where((i) => i.difficultyLevel <= maxDifficulty).toList();
     }
-    return items;
+    return validItems;
   }
 
   @override
@@ -98,14 +111,21 @@ class BaseVocabularyRepository implements VocabularyRepository {
         itemId,
       );
       if (doc != null && doc.exists && doc.data() != null) {
-        return VocabularyItemModel.fromMap(doc.data()!, id: doc.id);
+        final item = VocabularyItemModel.fromMap(doc.data()!, id: doc.id);
+        if (ContentValidator.isValidVocabularyItem(item)) {
+          return item;
+        }
       }
     } catch (_) {
       // Offline fallback
     }
 
     try {
-      return _inMemoryItems.firstWhere((i) => i.id == itemId);
+      final match = _inMemoryItems.firstWhere((i) => i.id == itemId);
+      if (ContentValidator.isValidVocabularyItem(match)) {
+        return match;
+      }
+      return null;
     } catch (_) {
       return null;
     }

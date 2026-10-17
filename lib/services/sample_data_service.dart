@@ -103,6 +103,17 @@ class SampleDataService {
           difficultyLevel: 2,
         ),
         VocabularyItemModel(
+          id: 'bird',
+          categoryId: 'animals',
+          labelEn: 'Bird',
+          labelAr: 'عُصْفُور',
+          transliteration: 'Usfur',
+          imageUrl: 'vocabulary/images/bird.png',
+          audioUrlAr: 'vocabulary/audio/ar/bird.mp3',
+          audioUrlEn: 'vocabulary/audio/en/bird.mp3',
+          difficultyLevel: 2,
+        ),
+        VocabularyItemModel(
           id: 'lion',
           categoryId: 'animals',
           labelEn: 'Lion',
@@ -159,6 +170,17 @@ class SampleDataService {
           audioUrlEn: 'vocabulary/audio/en/yellow.mp3',
           difficultyLevel: 2,
         ),
+        VocabularyItemModel(
+          id: 'orange',
+          categoryId: 'colours',
+          labelEn: 'Orange',
+          labelAr: 'بُرْتُقَالِي',
+          transliteration: 'Burtuqali',
+          imageUrl: 'vocabulary/images/orange.png',
+          audioUrlAr: 'vocabulary/audio/ar/orange.mp3',
+          audioUrlEn: 'vocabulary/audio/en/orange.mp3',
+          difficultyLevel: 3,
+        ),
 
         // Numbers
         VocabularyItemModel(
@@ -205,6 +227,17 @@ class SampleDataService {
           audioUrlEn: 'vocabulary/audio/en/four.mp3',
           difficultyLevel: 2,
         ),
+        VocabularyItemModel(
+          id: 'five',
+          categoryId: 'numbers',
+          labelEn: 'Five',
+          labelAr: 'خَمْسَة',
+          transliteration: 'Khamsah',
+          imageUrl: 'vocabulary/images/five.png',
+          audioUrlAr: 'vocabulary/audio/ar/five.mp3',
+          audioUrlEn: 'vocabulary/audio/en/five.mp3',
+          difficultyLevel: 3,
+        ),
 
         // Letters
         VocabularyItemModel(
@@ -250,6 +283,17 @@ class SampleDataService {
           audioUrlAr: 'vocabulary/audio/ar/thaa.mp3',
           audioUrlEn: 'vocabulary/audio/en/thaa.mp3',
           difficultyLevel: 2,
+        ),
+        VocabularyItemModel(
+          id: 'jeem',
+          categoryId: 'letters',
+          labelEn: 'Letter J',
+          labelAr: 'جِيم',
+          transliteration: 'Jeem',
+          imageUrl: 'vocabulary/images/jeem.png',
+          audioUrlAr: 'vocabulary/audio/ar/jeem.mp3',
+          audioUrlEn: 'vocabulary/audio/en/jeem.mp3',
+          difficultyLevel: 3,
         ),
       ];
 

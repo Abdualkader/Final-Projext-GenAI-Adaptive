@@ -45,7 +45,11 @@ class CategoryProvider extends ChangeNotifier {
   /// Sets the currently selected category by ID.
   void selectCategory(String categoryId) {
     try {
-      _selectedCategory = _categories.firstWhere((c) => c.id == categoryId);
+      final searchIds = (categoryId == 'colors' || categoryId == 'colours')
+          ? ['colours', 'colors']
+          : [categoryId];
+      _selectedCategory =
+          _categories.firstWhere((c) => searchIds.contains(c.id));
     } catch (_) {
       _selectedCategory = null;
     }

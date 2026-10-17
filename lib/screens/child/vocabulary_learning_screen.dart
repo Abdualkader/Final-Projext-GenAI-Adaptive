@@ -6,14 +6,20 @@ import '../../core/constants/app_routes.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/utils/responsive_layout.dart';
 import '../../models/vocabulary_item_model.dart';
+import '../../providers/category_provider.dart';
 import '../../providers/vocabulary_provider.dart';
 import '../../repositories/mock_data_repository.dart';
+import '../../widgets/app_error_widget.dart';
+import '../../widgets/empty_state_widget.dart';
 import '../../widgets/large_icon_button.dart';
+import '../../widgets/loading_widget.dart';
 import '../../widgets/vocabulary_card.dart';
 
-/// Vocabulary Learning Screen faithfully matching Wireframe 4 & Week 4 requirements:
-/// Supports dynamic category loading, clean progress indicator, bilingual typography,
-/// audio feedback, and explicit Next button.
+/// Vocabulary Learning Screen faithfully matching Wireframe 4 & Week 8 requirements:
+/// - Category filtering via repository/provider layer (Task 8)
+/// - Robust loading, empty, and gentle error states (Task 9)
+/// - Preview with image, bilingual labels, and audio buttons (Task 10 & 11)
+/// - Clean progress indicator and difficulty level display (Task 4)
 class VocabularyLearningScreen extends StatefulWidget {
   final String categoryId;
 
@@ -65,13 +71,28 @@ class _VocabularyLearningScreenState extends State<VocabularyLearningScreen> {
     }
   }
 
-  String _getCategoryTitle(AppLocalizations l10n) {
+  String _getCategoryTitle(AppLocalizations l10n, CategoryProvider? catProvider) {
+    if (catProvider != null && catProvider.categories.isNotEmpty) {
+      try {
+        final searchIds = (_activeCategoryId == 'colors' || _activeCategoryId == 'colours')
+            ? ['colours', 'colors']
+            : [_activeCategoryId];
+        final cat = catProvider.categories.firstWhere(
+          (c) => searchIds.contains(c.id),
+        );
+        return cat.localizedName(l10n.isArabic);
+      } catch (_) {
+        // Fall back to localized key
+      }
+    }
+
     switch (_activeCategoryId) {
       case 'letters':
         return l10n.text('category_letters');
       case 'numbers':
         return l10n.text('category_numbers');
       case 'colours':
+      case 'colors':
         return l10n.text('category_colours');
       case 'animals':
       default:
@@ -86,6 +107,7 @@ class _VocabularyLearningScreenState extends State<VocabularyLearningScreen> {
       case 'numbers':
         return Icons.looks_one_rounded;
       case 'colours':
+      case 'colors':
         return Icons.palette_rounded;
       case 'animals':
       default:
@@ -98,14 +120,75 @@ class _VocabularyLearningScreenState extends State<VocabularyLearningScreen> {
     final l10n = AppLocalizations.of(context);
     final vocabProvider =
         Provider.of<VocabularyProvider?>(context, listen: true);
-    final activeItems = (vocabProvider != null &&
-            vocabProvider.items.isNotEmpty &&
-            vocabProvider.currentCategoryId == _activeCategoryId)
+    final catProvider =
+        Provider.of<CategoryProvider?>(context, listen: false);
+
+    // Determine state and active items
+    final bool hasProvider = vocabProvider != null;
+    final bool isProviderForActiveCategory = hasProvider &&
+        (vocabProvider.currentCategoryId == _activeCategoryId ||
+            (vocabProvider.currentCategoryId == 'colours' && _activeCategoryId == 'colors') ||
+            (vocabProvider.currentCategoryId == 'colors' && _activeCategoryId == 'colours'));
+
+    final activeItems = (isProviderForActiveCategory && vocabProvider.items.isNotEmpty)
         ? vocabProvider.items
         : _items;
-    final safeIndex = _currentIndex.clamp(0, activeItems.length - 1);
-    final currentItem = activeItems[safeIndex];
-    final totalCount = activeItems.length;
+
+    // Handle asynchronous loading states (Task 9)
+    if (hasProvider && isProviderForActiveCategory) {
+      final uiState = vocabProvider.uiState;
+
+      if (uiState.isLoading) {
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: const SafeArea(
+            child: LoadingWidget(),
+          ),
+        );
+      }
+
+      if (uiState.isError) {
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: SafeArea(
+            child: AppErrorWidget(
+              message: uiState.getDisplayError(l10n.isArabic, isChildMode: true),
+              onRetry: () => vocabProvider.loadVocabulary(_activeCategoryId),
+              isChildMode: true,
+            ),
+          ),
+        );
+      }
+
+      if (uiState.isEmpty && activeItems.isEmpty) {
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: SafeArea(
+            child: EmptyStateWidget(
+              title: l10n.isArabic ? 'لا توجد كلمات حالياً' : 'No vocabulary yet',
+              subtitle: l10n.isArabic
+                  ? 'سيتم إضافة كلمات جديدة في هذا القسم قريباً 🌱'
+                  : 'New vocabulary items will be added soon 🌱',
+              icon: Icons.school_rounded,
+              actionLabel: l10n.isArabic ? 'العودة' : 'Go Back',
+              onAction: () => Navigator.pop(context),
+            ),
+          ),
+        );
+      }
+    }
+
+    final totalCount = activeItems.isEmpty ? 1 : activeItems.length;
+    final safeIndex = _currentIndex.clamp(0, activeItems.isEmpty ? 0 : activeItems.length - 1);
+    final currentItem = activeItems.isNotEmpty
+        ? activeItems[safeIndex]
+        : VocabularyItemModel(
+            id: 'placeholder',
+            categoryId: _activeCategoryId,
+            labelEn: 'Loading',
+            labelAr: 'جار التحميل',
+            imageUrl: '',
+          );
     final progressFraction = (safeIndex + 1) / totalCount;
 
     return Scaffold(
@@ -125,7 +208,7 @@ class _VocabularyLearningScreenState extends State<VocabularyLearningScreen> {
                     size: 48,
                     onPressed: () => Navigator.pop(context),
                   ),
-                  // Category Pill
+                  // Category Pill (Task 2: Retrieved from Firestore / CategoryModel)
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppDimensions.spaceM,
@@ -146,7 +229,7 @@ class _VocabularyLearningScreenState extends State<VocabularyLearningScreen> {
                         ),
                         const SizedBox(width: AppDimensions.spaceS),
                         Text(
-                          _getCategoryTitle(l10n),
+                          _getCategoryTitle(l10n, catProvider),
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -172,7 +255,7 @@ class _VocabularyLearningScreenState extends State<VocabularyLearningScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          '${_currentIndex + 1} / $totalCount',
+                          '${safeIndex + 1} / $totalCount',
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
@@ -197,16 +280,23 @@ class _VocabularyLearningScreenState extends State<VocabularyLearningScreen> {
                 ],
               ),
               const SizedBox(height: AppDimensions.spaceM),
-              // Main Vocabulary Card
+
+              // Main Vocabulary Card (Tasks 4, 5, 7, 10, 11)
               Expanded(
                 child: VocabularyCard(
                   item: currentItem,
-                  hasPrevious: _currentIndex > 0,
+                  isArabic: l10n.isArabic,
+                  hasPrevious: safeIndex > 0,
                   hasNext: true,
                   nextButtonLabel: l10n.text('btn_next'),
                   audioButtonLabel: l10n.text('btn_listen'),
                   onPlayAudio: () {
-                    // Audio pronunciation trigger (simulated with calm sensory banner)
+                    // Task 11: Connect audio playback to Firebase data / AudioService
+                    if (vocabProvider != null) {
+                      vocabProvider.playAudioFor(currentItem, isArabic: l10n.isArabic);
+                    }
+
+                    // Sensory audio banner
                     ScaffoldMessenger.of(context).hideCurrentSnackBar();
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -229,14 +319,30 @@ class _VocabularyLearningScreenState extends State<VocabularyLearningScreen> {
                       ),
                     );
                   },
+                  onPlayAudioAr: () {
+                    if (vocabProvider != null) {
+                      vocabProvider.playAudioFor(currentItem, isArabic: true);
+                    }
+                  },
+                  onPlayAudioEn: () {
+                    if (vocabProvider != null) {
+                      vocabProvider.playAudioFor(currentItem, isArabic: false);
+                    }
+                  },
                   onPrevious: () {
-                    if (_currentIndex > 0) {
-                      setState(() => _currentIndex--);
+                    if (safeIndex > 0) {
+                      setState(() => _currentIndex = safeIndex - 1);
+                      if (vocabProvider != null) {
+                        vocabProvider.previousItem();
+                      }
                     }
                   },
                   onNext: () {
-                    if (_currentIndex < totalCount - 1) {
-                      setState(() => _currentIndex++);
+                    if (safeIndex < totalCount - 1) {
+                      setState(() => _currentIndex = safeIndex + 1);
+                      if (vocabProvider != null) {
+                        vocabProvider.nextItem();
+                      }
                     } else {
                       // Navigate to Quiz with category argument
                       Navigator.pushNamed(

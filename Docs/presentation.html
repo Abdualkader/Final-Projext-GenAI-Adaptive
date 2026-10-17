@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mid-Evaluation Presentation — GenAI Adaptive Learning Assistant for Children with ASD</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F172A 100%);
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --card-border: rgba(148, 163, 184, 0.15);
+      --text-main: #F8FAFC;
+      --text-muted: #94A3B8;
+      --primary: #38BDF8;
+      --primary-light: #BAE6FD;
+      --accent: #34D399;
+      --accent-warm: #FBBF24;
+      --purple: #A78BFA;
+      --rose: #FB7185;
+      --font-en: 'Outfit', sans-serif;
+      --font-ar: 'Tajawal', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-en);
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* Header Nav */
+    header {
+      height: 60px;
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--card-border);
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(12px);
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      font-size: 1.05rem;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-badge {
+      background: linear-gradient(135deg, #0284C7, #06B6D4);
+      color: #fff;
+      padding: 3px 9px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .nav-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn {
+      background: rgba(51, 65, 85, 0.6);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 6px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:hover {
+      background: rgba(71, 85, 105, 0.9);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #0284C7, #2563EB);
+      border: none;
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #0369A1, #1D4ED8);
+    }
+
+    /* Main Deck Stage */
+    main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      position: relative;
+    }
+
+    .slide-viewport {
+      width: 100%;
+      max-width: 1200px;
+      height: 675px;
+      aspect-ratio: 16 / 9;
+      background: radial-gradient(circle at 10% 20%, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 90%);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 40px rgba(56, 189, 248, 0.1);
+      position: relative;
+      overflow: hidden;
+      padding: 3rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .slide {
+      display: none;
+      height: 100%;
+      flex-direction: column;
+      animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .slide.active {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.99);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    /* Slide Header */
+    .slide-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+    }
+
+    .slide-topic {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .slide-topic::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+      display: inline-block;
+    }
+
+    .slide-number {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.05);
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    .slide-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      color: #fff;
+      line-height: 1.2;
+      margin-bottom: 0.6rem;
+    }
+
+    .slide-subtitle {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      font-weight: 400;
+    }
+
+    /* Slide Content Bodies */
+    .slide-body {
+      flex: 1;
+      display: flex;
+      gap: 1.5rem;
+      overflow-y: auto;
+    }
+
+    .col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .card {
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 1.2rem;
+      backdrop-filter: blur(8px);
+      transition: border-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .card:hover {
+      border-color: rgba(56, 189, 248, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--primary-light);
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title.accent { color: var(--accent); }
+    .card-title.warm { color: var(--accent-warm); }
+    .card-title.purple { color: var(--purple); }
+
+    ul.card-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    ul.card-list li {
+      font-size: 0.92rem;
+      color: #E2E8F0;
+      line-height: 1.45;
+      position: relative;
+      padding-left: 1.25rem;
+    }
+
+    ul.card-list li::before {
+      content: "•";
+      color: var(--primary);
+      position: absolute;
+      left: 0;
+      font-weight: bold;
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+
+    .arabic-text {
+      font-family: var(--font-ar);
+      direction: rtl;
+    }
+
+    /* Metrics Grid */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+
+    .metric-box {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1.2rem;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .metric-val {
+      font-size: 2.3rem;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+      margin-bottom: 0.4rem;
+    }
+
+    .metric-val.blue { color: var(--primary); }
+    .metric-val.purple { color: var(--purple); }
+    .metric-val.warm { color: var(--accent-warm); }
+
+    .metric-lbl {
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    /* Diagram Block */
+    .diagram-box {
+      background: #090D16;
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1rem 1.2rem;
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: #38BDF8;
+      line-height: 1.4;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    /* Table Styling */
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      text-align: left;
+    }
+
+    table.data-table th {
+      background: rgba(51, 65, 85, 0.4);
+      padding: 8px 12px;
+      color: var(--primary-light);
+      font-weight: 700;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    table.data-table td {
+      padding: 7px 12px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+      color: #CBD5E1;
+    }
+
+    /* Title Slide Specific */
+    .title-slide-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      gap: 1.25rem;
+    }
+
+    .title-badge-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .pill-badge {
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: var(--primary);
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+
+    .main-hero-title {
+      font-size: 2.8rem;
+      font-weight: 800;
+      line-height: 1.15;
+      background: linear-gradient(135deg, #FFFFFF 0%, #BAE6FD 50%, #38BDF8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      max-width: 900px;
+    }
+
+    .main-hero-subtitle {
+      font-size: 1.2rem;
+      color: #94A3B8;
+      max-width: 760px;
+      line-height: 1.5;
+    }
+
+    .meta-footer-info {
+      display: flex;
+      gap: 2rem;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* Notes Drawer */
+    .notes-drawer {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(15, 23, 42, 0.95);
+      border-top: 2px solid var(--primary);
+      padding: 1.2rem 2rem;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 50;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .notes-drawer.open {
+      transform: translateY(0);
+    }
+
+    .notes-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .notes-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .notes-text {
+      font-size: 0.95rem;
+      color: #E2E8F0;
+      line-height: 1.55;
+    }
+
+    /* Footer Navigation Bar */
+    footer {
+      height: 60px;
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(15, 23, 42, 0.8);
+      border-top: 1px solid var(--card-border);
+      backdrop-filter: blur(12px);
+    }
+
+    .progress-bar-container {
+      flex: 1;
+      max-width: 400px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      overflow: hidden;
+      margin: 0 2rem;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #38BDF8, #34D399);
+      width: 7%;
+      transition: width 0.3s ease;
+    }
+
+    .keyboard-hint {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .kbd {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      font-family: monospace;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <span>GenAI ASD Learning Assistant</span>
+      <span class="brand-badge">Mid Evaluation</span>
+    </div>
+    <div class="nav-controls">
+      <button class="btn" id="toggleNotesBtn">🎙️ Presenter Script (Notes)</button>
+      <button class="btn" id="toggleFullscreenBtn">⛶ Fullscreen</button>
+    </div>
+  </header>
+
+  <!-- Slide Stage -->
+  <main>
+    <div class="slide-viewport">
+
+      <!-- SLIDE 1: Title -->
+      <div class="slide active" data-slide="1" data-notes="Good morning, esteemed committee members and respected professors. Today, we are proud to present the mid-evaluation progress for our graduation project: The GenAI Adaptive Learning Assistant for Children with Autism Spectrum Disorder. Traditional educational applications present severe sensory hurdles: flashing neon colors, loud buzzers, and rigid difficulties. Our platform resolves this with a calm, bilingual, multi-sensory environment powered by Flutter and Google Cloud Firebase, with 50% of the project milestones fully achieved.">
+        <div class="title-slide-content">
+          <div class="title-badge-row">
+            <span class="pill-badge">🎓 University Graduation Project</span>
+            <span class="pill-badge">💙 Autism Spectrum Disorder (ASD) Focus</span>
+            <span class="pill-badge">⚡ Flutter & Google Cloud Firebase</span>
+            <span class="pill-badge">🤖 Generative AI Adaptive Architecture</span>
+          </div>
+          <h1 class="main-hero-title">GenAI Adaptive Learning Assistant for Children with ASD</h1>
+          <p class="main-hero-subtitle">
+            A neurodivergent-calibrated, bilingual multi-sensory educational platform combining clinical sensory safety, real-time closed-loop adaptation, and enterprise serverless cloud architecture.
+          </p>
+          <div class="meta-footer-info">
+            <span><strong>Milestone:</strong> Weeks 1–7 Mid-Evaluation</span>
+            <span><strong>Target Audience:</strong> Children (Ages 4–10) · Parents · Educators</span>
+            <span><strong>Status:</strong> 95/95 Tests Passing (100%)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 2: Architecture -->
+      <div class="slide" data-slide="2" data-notes="Our system architecture follows clean software engineering principles. We adopted a Three-Tier model separating the presentation layer from business logic and cloud persistence. Crucially, we enforce the Zero Key Exposure rule: all Generative AI interactions are isolated behind serverless Cloud Functions, eliminating the critical vulnerability of leaking API keys inside client binaries. Furthermore, our client codebase strictly separates UI widgets from database operations through repositories and reactive providers.">
+        <div class="slide-meta">
+          <span class="slide-topic">Topic 1: Architecture & Design Implementation</span>
+          <span class="slide-number">02 / 14</span>
+        </div>
+        <h2 class="slide-title">Three-Tier Architecture & Clean Design</h2>
+        <p class="slide-subtitle">Strict separation of presentation, serverless logic, and cloud persistence with zero client-side credential exposure.</p>
+        <div class="slide-body">
+          <div class="col">
+            <div class="card">
+              <div class="card-title">Three-Tier Architectural Model</div>
+              <ul class="card-list">
+                <li><strong>Presentation Tier:</strong> Flutter Mobile & Web Client with reactive Provider state management and sensory-friendly UI components.</li>
+                <li><strong>Application Logic Tier:</strong> Firebase Cloud Functions hosting the Item Response Theory (IRT) difficulty engine and AI Prompt Gatekeeper.</li>
+                <li><strong>Data Tier:</strong> Cloud Firestore (NoSQL document database) and Firebase Cloud Storage (high-clarity audio and image assets).</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="card-title accent">Zero Key Exposure Rule (Security)</div>
+              <ul class="card-list">
+                <li>Private Generative AI API keys are <strong>strictly forbidden</strong> from client binaries and assets.</li>
+                <li>All prompt orchestration, response parsing, and validation run server-side behind authenticated Cloud Functions.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="col">
+            <div class="diagram-box">┌────────────────────────────────────────────────────────┐
+│                   Presentation Layer                   │
+│          Flutter Mobile Application (Dart)             │
+│   (Child Mode: Calm UI/UX | Parent Mode: Dashboard)   │
+└───────────────────────────┬────────────────────────────┘
+                            │ HTTPS / Callable Functions
+                            ▼
+┌────────────────────────────────────────────────────────┐
+│                Application Logic Layer                 │
+│                 Firebase Cloud Functions               │
+│  - Adaptive Difficulty Engine (IRT)                    │
+│  - AI Prompt Orchestration & Validation Gatekeeper     │
+└─────────────┬────────────────────────────┬─────────────┘
+              │ Direct API Calls           │ Firestore SDK
+              ▼                            ▼
+┌──────────────────────────┐  ┌──────────────────────────┐
+│      AI/NLP Services     │  │        Data Layer        │
+│   (LLM Exercise Gen)     │  │ Cloud Firestore & Storage│
+└──────────────────────────┘  └──────────────────────────┘</div>
+            <div class="card">
+              <div class="card-title purple">Unidirectional Data Flow</div>
+              <ul class="card-list">
+                <li><code>UI Widgets</code> → <code>ChangeNotifier Providers</code> → <code>Repositories</code> → <code>Services</code> → <code>Firebase SDK</code>.</li>
+                <li>Zero database queries in UI widgets; all views observe <code>UiState</code> containers.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 3: Core Functionality -->
+      <div class="slide" data-slide="3" data-notes="In terms of core functionality, the system supports multi-sensory learning across four foundational categories: Letters, Numbers, Colors, and Animals. We built a fully dynamic bilingual engine supporting Arabic RTL with diacritics and English LTR. Notice our deliberate dual-persona design: parents authenticate securely to view student telemetry, while children enjoy an open, low-friction learning experience free of frustrating password barriers.">
+        <div class="slide-meta">
+          <span class="slide-topic">Topic 2: Core Functionality Implementation</span>
+          <span class="slide-number">03 / 14</span>
+        </div>
+        <h2 class="slide-title">Multi-Sensory Learning & Bilingual Engine</h2>
+        <p class="slide-subtitle">Calibrated learning cues, dynamic language switching, and dual-persona access controls.</p>
+        <div class="slide-body">
+          <div class="col">
+            <div class="card">
+              <div class="card-title">4 Core Learning Categories</div>
+              <ul class="card-list">
+                <li><strong>Letters (الحروف):</strong> Foundational alphabet identification with native phonetics.</li>
+                <li><strong>Numbers (الأرقام):</strong> Quantities, counting cards, and number symbols.</li>
+                <li><strong>Colors (الألوان):</strong> Visual spectrum association with real-world objects.</li>
+                <li><strong>Animals (الحيوانات):</strong> Familiar animal flashcards and audio vocalizations.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="card-title accent">Dynamic Bilingual Engine (RTL / LTR)</div>
+              <ul class="card-list">
+                <li>Native Arabic Right-to-Left (RTL) mode with full diacritics (<em>Tashkeel</em>) for phonological accuracy.</li>
+                <li>Native English Left-to-Right (LTR) mode with real-time text flipping and font realignment without app restart.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card">
+              <div class="card-title warm">Dual-Persona Navigation Architecture</div>
+              <ul class="card-list">
+                <li><strong>Child Learner Persona:</strong> Open, friction-free access. Zero login or password hurdles preventing children from accessing learning modules.</li>
+                <li><strong>Parent & Educator Persona:</strong> RouteGuard-protected portal. Intercepts unauthorized navigation to analytics and settings, enforcing secure email/password authentication.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="card-title purple">Assessment & Telemetry Recording</div>
+              <ul class="card-list">
+                <li>3-option image-word matching trials with positive reinforcement (stars and affirmations).</li>
+                <li>Live session logging: timestamps, items presented, response duration, and accuracy.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 4: Backend & Database -->
+      <div class="slide" data-slide="4" data-notes="Our backend implementation leverages Cloud Firestore and Firebase Cloud Storage. We established seven structured collections capturing everything from parent profiles to granular question-level responses and daily mastery records. To guarantee sub-second queries on historical trends, we authored composite index specifications in firestore.indexes.json. Our StorageService abstracts cloud media fetching so the Flutter UI only receives resolved URLs, supported by offline local asset fallbacks.">
+        <div class="slide-meta">
+          <span class="slide-topic">Topic 3: Backend & Database Implementation</span>
+          <span class="slide-number">04 / 14</span>
+        </div>
+        <h2 class="slide-title">Cloud Firestore & Storage Data Layer</h2>
+        <p class="slide-subtitle">NoSQL document database, media asset resolution, and optimized composite query indexes.</p>
+        <div class="slide-body">
+          <div class="col">
+            <div class="card">
+              <div class="card-title">7 Core Firestore Collections</div>
+              <table class="data-table">
+                <thead>
+                  <tr><th>Collection</th><th>Model Entity</th><th>Core Attributes</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td><code>users</code></td><td>UserModel</td><td>userId, role, preferredLanguage, linkedChildIds</td></tr>
+                  <tr><td><code>children</code></td><td>ChildModel</td><td>childId, parentId, name, age, asdLevel</td></tr>
+                  <tr><td><code>categories</code></td><td>CategoryModel</td><td>id, nameEn, nameAr, iconName, orderIndex</td></tr>
+                  <tr><td><code>vocabularyItems</code></td><td>VocabularyItemModel</td><td>itemId, categoryId, imageUrl, audioUrls, difficulty</td></tr>
+                  <tr><td><code>sessions</code></td><td>LearningSessionModel</td><td>sessionId, childId, startTime, endTime, score</td></tr>
+                  <tr><td><code>quizResults</code></td><td>QuizResultModel</td><td>resultId, sessionId, questionId, isCorrect, timestamp</td></tr>
+                  <tr><td><code>progressRecords</code></td><td>ProgressRecordModel</td><td>recordId, childId, date, itemsMastered, accuracy</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card">
+              <div class="card-title accent">Composite Query Indexes (Optimized)</div>
+              <ul class="card-list">
+                <li><code>sessions:</code> childId ASC + startTime DESC (Fast historical session queries)</li>
+                <li><code>vocabularyItems:</code> categoryId ASC + difficultyLevel ASC (Instant difficulty filtering)</li>
+                <li><code>progressRecords:</code> childId ASC + date DESC (Rapid longitudinal trend charts)</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="card-title warm">Firebase Cloud Storage Service</div>
+              <ul class="card-list">
+                <li>Structured asset paths: <code>vocabulary/images/</code>, <code>vocabulary/audio/ar/</code>, <code>vocabulary/audio/en/</code>.</li>
+                <li>Clean URL resolution via <code>StorageService</code> with automatic offline fallback to local bundled assets.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 5: Security -->
+      <div class="slide" data-slide="5" data-notes="Security is never solved solely on the client side. We deployed rigorous Firestore and Cloud Storage security rules. A parent cannot query another child's progress even if they know the document ID because our security rules validate parentId ownership server-side. At the same time, client-side RouteGuards protect educator screens, ensuring our application is safe, compliant, and private.">
+        <div class="slide-meta">
+          <span class="slide-topic">Topic 3 & 8: Security Architecture & Access Control</span>
+          <span class="slide-number">05 / 14</span>
+        </div>
+        <h2 class="slide-title">Server-Side Security & Data Privacy</h2>
+        <p class="slide-subtitle">Granular rule-based access constraints protecting neurodivergent student data privacy.</p>
+        <div class="slide-body">
+          <div class="col">
+            <div class="card">
+              <div class="card-title">Cloud Firestore Security Rules (firestore.rules)</div>
+              <ul class="card-list">
+                <li><strong>Account Privacy:</strong> <code>request.auth.uid == userId</code> strictly blocks parents from inspecting or modifying unrelated user accounts.</li>
+                <li><strong>Child Data Scoping:</strong> <code>request.auth.uid == resource.data.parentId</code> enforces that child profiles, sessions, quiz logs, and progress are restricted strictly to authorized parents.</li>
+                <li><strong>Content Protection:</strong> Learning categories and vocabulary cards are read-only for authenticated learners; write/delete operations are forbidden.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="card-title accent">Cloud Storage Security Rules (storage.rules)</div>
+              <ul class="card-list">
+                <li>Educational media (images, audio pronunciation) readable by authenticated users.</li>
+                <li>Upload and overwrite permissions blocked for client accounts.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card">
+              <div class="card-title warm">Client Navigation RouteGuard</div>
+              <ul class="card-list">
+                <li><strong>Protected Routes:</strong> <code>/parent/child-selection</code>, <code>/parent/dashboard</code>, <code>/parent/settings</code>.</li>
+                <li><strong>Open Child Routes:</strong> <code>/child/home</code>, <code>/child/learning</code>, <code>/child/quiz</code>.</li>
+                <li>Unauthenticated navigation attempts are automatically intercepted and routed to the secure login barrier.</li>
+              </ul>
+            </div>
+            <div class="diagram-box">Unauthenticated User ──▶ Attempts /parent/dashboard
+         │
+         ▼
+[RouteGuard Intercept] ──▶ Redirected to /login
+
+Authenticated Parent  ──▶ Queries /progressRecords
+         │
+         ▼
+[Firestore Security]  ──▶ Verified: request.auth.uid == parentId</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 6: Sensory UI/UX -->
+      <div class="slide" data-slide="6" data-notes="Our user interface is designed in accordance with neurodivergent ergonomics and ASD sensory profiles. Children with autism are susceptible to sensory overload from aggressive visual stimulation. Consequently, we eliminated saturated neon colors, strobe animations, and jarring error buzzers. We selected a calm pastel palette, enlarged touch targets to at least 64 dp for developing motor coordination, and replaced punishing red indicators with encouraging corrective prompts.">
+        <div class="slide-meta">
+          <span class="slide-topic">Topic 4: Frontend & Sensory UI/UX Implementation</span>
+          <span class="slide-number">06 / 14</span>
+        </div>
+        <h2 class="slide-title">Sensory-Calibrated Design System</h2>
+        <p class="slide-subtitle">Engineered specifically for neurodivergent cognitive profiles and sensory sensitivities.</p>
+        <div class="slide-body">
+          <div class="col">
+            <div class="card">
+              <div class="card-title">Calm Pastel Palette (Sensory Safety)</div>
+              <ul class="card-list">
+                <li><strong>Soft Sky Blue (#E8F4F8):</strong> Primary peaceful background tone reducing ocular fatigue.</li>
+                <li><strong>Mint Green (#E8F8F5):</strong> Gentle affirmation color for successful interactions.</li>
+                <li><strong>Warm Amber (#FFF8E7):</strong> Supportive guidance indicator replacing harsh red error states.</li>
+                <li><strong>Slate Typography (#1A2B3C):</strong> High-contrast readable text with zero glare.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="card-title accent">Elimination of Sensory Triggers</div>
+              <ul class="card-list">
+                <li><strong>No Strobing or Rapid Flashes:</strong> All transitions use smooth easing (≥400 ms).</li>
+                <li><strong>No Punitive Buzzers:</strong> Wrong answers trigger encouraging gentle chords.</li>
+                <li><strong>Gentle Phrasing:</strong> <em>"Let's try again gently! 🌱"</em> instead of <em>"Wrong Answer!"</em>.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card">
+              <div class="card-title warm">Motor & Cognitive Ergonomics</div>
+              <ul class="card-list">
+                <li><strong>Enlarged Touch Targets:</strong> All buttons and interactive flashcards adhere to ≥64×64 dp targets to support developing fine-motor coordination.</li>
+                <li><strong>Predictable Layouts:</strong> Fixed button positions (Next/Back/Audio) create cognitive security and spatial familiarity.</li>
+                <li><strong>Zero Cognitive Clutter:</strong> Clean, focused views with zero third-party ads, moving tickers, or distracting decorative graphics.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 7: Screens Showcase -->
+      <div class="slide" data-slide="7" data-notes="Across Weeks 1 through 7, we engineered seven complete, responsive screens. For the child, the Home, Vocabulary Learning, and Interactive Quiz screens offer an intuitive, encouraging journey. For adults, the Child Selection, Progress Dashboard, and Sensory Settings screens provide actionable insights and customizable session boundaries, such as limiting session time to prevent cognitive fatigue.">
+        <div class="slide-meta">
+          <span class="slide-topic">Topic 4: Frontend / Screens Showcase</span>
+          <span class="slide-number">07 / 14</span>
+        </div>
+        <h2 class="slide-title">Interactive Screen Portfolio (Weeks 1–7)</h2>
+        <p class="slide-subtitle">7 fully functional, responsive screens supporting child learning and educator oversight.</p>
+        <div class="slide-body">
+          <div class="col">
+            <div class="card">
+              <div class="card-title">Child Learner Screens</div>
+              <ul class="card-list">
+                <li><strong>Home Screen:</strong> 4 category cards with auditory prompts, sensory-friendly icons, and bilingual toggle.</li>
+                <li><strong>Vocabulary Learning Screen:</strong> High-contrast flashcards, bilingual pronunciation buttons, and clear next/prev controls.</li>
+                <li><strong>Interactive Quiz Screen:</strong> 3-option image-matching trials, star particle celebrations, and kind retry cues.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="card-title accent">Parent & Educator Screens</div>
+              <ul class="card-list">
+                <li><strong>Login Screen:</strong> Form validation, gentle error container, and guest child bypass.</li>
+                <li><strong>Child Selection Screen:</strong> Multi-student cards showing age, ASD level, and accuracy badges.</li>
+                <li><strong>Progress Dashboard:</strong> Mastered words counter, accuracy meters, and session duration charts.</li>
+                <li><strong>Sensory Settings Screen:</strong> Audio volume slider, session time limiter (5–30 min), and language toggle.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card">
+              <div class="card-title purple">Sensory Controls Highlight: Session Duration Limiter</div>
+              <ul class="card-list">
+                <li>Children with ASD experience cognitive fatigue rapidly.</li>
+                <li>Our settings screen allows educators to set maximum continuous session durations (e.g., 10 minutes).</li>
+                <li>The app gracefully signals completion and encourages healthy rest periods.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 8: Testing Strategy -->
+      <div class="slide" data-slide="8" data-notes="Our testing strategy adheres to strict software quality assurance standards. We employ a three-tier test pyramid consisting of unit tests, widget tests, and full integration tests. Importantly, we engineered our test suites to be hermetic: by injecting mock authentication and in-memory repository fallbacks, our entire automated test suite runs offline in CI pipelines with zero flaky network dependencies.">
+        <div class="slide-meta">
+          <span class="slide-topic">Topic 5: Testing Strategy & Methodology</span>
+          <span class="slide-number">08 / 14</span>
+        </div>
+        <h2 class="slide-title">Testing Strategy & Hermetic Methodology</h2>
+        <p class="slide-subtitle">Multi-tier test automation ensuring sensory compliance, UI stability, and data integrity.</p>
+        <div class="slide-body">
+          <div class="col">
+            <div class="card">
+              <div class="card-title">Multi-Tier Test Pyramid</div>
+              <ul class="card-list">
+                <li><strong>Unit Testing:</strong> Domain model serialization (toMap/fromMap), repository contracts, exception mapping, and UiState lifecycle states.</li>
+                <li><strong>Widget & UI Testing:</strong> Screen rendering, bilingual RTL/LTR flipping, touch target measurements, sensory constraint verification, and form validation.</li>
+                <li><strong>Integration Testing:</strong> End-to-end data pipeline simulation from Login → User Profile → Child Selection → Categories → Vocabulary → Storage URLs.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card">
+              <div class="card-title accent">Hermetic Testability Architecture</div>
+              <ul class="card-list">
+                <li>Employs <code>FakeAuthService</code> and <code>SampleDataService</code> with in-memory caching.</li>
+                <li><strong>100% Offline Capability:</strong> All 95 tests execute reliably in headless CI environments without requiring active internet or initialized Firebase apps.</li>
+                <li>Zero flaky test executions or external service timeouts.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="card-title warm">Sensory Heuristic Assertions</div>
+              <ul class="card-list">
+                <li>Automated tests assert that error states never render harsh red background colors.</li>
+                <li>Validates that child-mode exceptions always output calm, supportive strings.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 9: Testing Results & Bugs -->
+      <div class="slide" data-slide="9" data-notes="We are delighted to report a 100% pass rate across all 95 automated test cases, with zero static analysis warnings. During development, our rigorous testing caught important edge cases early: for example, Arabic diacritics caused search mismatches, which we resolved by implementing phonological normalization. We also fixed headless test runner issues by implementing resilient in-memory fallbacks, and guaranteed that technical exceptions can never slip past our dual-mode sensory error handler.">
+        <div class="slide-meta">
+          <span class="slide-topic">Topic 6: Testing Results & Bug Fixing</span>
+          <span class="slide-number">09 / 14</span>
+        </div>
+        <h2 class="slide-title">Quality Verification & Resolved Issues</h2>
+        <p class="slide-subtitle">100% automated test pass rate and empirical resolution of real-world edge cases.</p>
+        <div class="slide-body">
+          <div class="col">
+            <div class="metric-grid">
+              <div class="metric-box">
+                <span class="metric-val">95</span>
+                <span class="metric-lbl">Total Tests</span>
+              </div>
+              <div class="metric-box">
+                <span class="metric-val blue">100%</span>
+                <span class="metric-lbl">Pass Rate</span>
+              </div>
+              <div class="metric-box">
+                <span class="metric-val purple">0</span>
+                <span class="metric-lbl">Lint Warnings</span>
+              </div>
+              <div class="metric-box">
+                <span class="metric-val warm">&lt;7s</span>
+                <span class="metric-lbl">Suite Runtime</span>
+              </div>
+            </div>
+            <div class="card" style="margin-top: 1rem;">
+              <div class="card-title accent">Bug 1: Arabic Diacritics (Tashkeel) String Matching</div>
+              <p style="font-size:0.9rem; color:#CBD5E1;"><em>Issue:</em> Substring search failed on words like 'قِطَّة' due to Unicode diacritic characters (Kasra \u0650).<br>
+              <em>Fix:</em> Engineered diacritical normalization across vocabulary search queries.</p>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card">
+              <div class="card-title warm">Bug 2: Headless Unit Test Firestore Initialization</div>
+              <p style="font-size:0.9rem; color:#CBD5E1;"><em>Issue:</em> Headless <code>flutter test</code> runs lacked default Firebase apps, throwing unhandled exceptions.<br>
+              <em>Fix:</em> Implemented resilient in-memory fallback state in all repository write methods.</p>
+            </div>
+            <div class="card">
+              <div class="card-title purple">Bug 3: Dynamic RTL Layout Flipping & Overflow</div>
+              <p style="font-size:0.9rem; color:#CBD5E1;"><em>Issue:</em> Rapid toggling between Arabic and English caused text clipping on compact viewports.<br>
+              <em>Fix:</em> Wrapped titles in responsive LayoutBuilder and Directionality widgets.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 10: System Integration -->
+      <div class="slide" data-slide="10" data-notes="Our system integration status is mature and solid for this mid-evaluation milestone. The Flutter client is actively integrated with Firebase Authentication, Cloud Firestore, and Cloud Storage. All state management is reactive, ensuring zero UI lag or polling overhead. The backend contract for our serverless Generative AI Cloud Functions is fully specified and awaiting the scheduled Week 12 rollout.">
+        <div class="slide-meta">
+          <span class="slide-topic">Topic 7: System Integration Status</span>
+          <span class="slide-number">10 / 14</span>
+        </div>
+        <h2 class="slide-title">System Integration Status (Client ↔ Cloud)</h2>
+        <p class="slide-subtitle">Live, bi-directional communication across mobile client, state management, and cloud services.</p>
+        <div class="slide-body">
+          <div class="col">
+            <div class="card">
+              <div class="card-title">Client ↔ Firebase Cloud Services</div>
+              <ul class="card-list">
+                <li><strong>Firebase Authentication:</strong> Live auth state stream, token session persistence, role decoding, and route guards. <em>(Operational)</em></li>
+                <li><strong>Cloud Firestore:</strong> Live reads/writes across 7 collections with model mapping and offline fallbacks. <em>(Operational)</em></li>
+                <li><strong>Cloud Storage:</strong> Path resolution for flashcard images and bilingual pronunciation audio. <em>(Operational)</em></li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="card-title accent">Client ↔ State Management Providers</div>
+              <ul class="card-list">
+                <li>ChangeNotifier providers (AuthProvider, CategoryProvider, VocabularyProvider, QuizProvider, SettingsProvider) supply live reactive data to UI widgets without direct polling.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card">
+              <div class="card-title warm">Cloud Functions ↔ Generative AI Engine</div>
+              <ul class="card-list">
+                <li>Backend interface contracts and prompt templates specified.</li>
+                <li>Cloud Function deployment and API gateway scheduled for Week 12 implementation.</li>
+              </ul>
+            </div>
+            <div class="diagram-box">[Flutter Client] ── Auth State Stream ──▶ [Firebase Auth]    (LIVE)
+[Flutter Client] ── Repositories & SDK ──▶ [Cloud Firestore]  (LIVE)
+[Flutter Client] ── URL Resolution ──────▶ [Cloud Storage]    (LIVE)
+[Providers]      ── Reactive Binding ────▶ [Repositories]     (LIVE)
+[Cloud Functions]── Secure API Gateway ──▶ [GenAI LLM]        (READY W12)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 11: Deployment Readiness -->
+      <div class="slide" data-slide="11" data-notes="Regarding deployment readiness, our repository is well-organized and production-ready. We have verified builds across Android, iOS, and Web. Firebase configurations, security rules, and composite indexes are deployed. The codebase passes automated CI validation, satisfies neurodivergent accessibility audits, and complies strictly with the Zero Key Exposure rule.">
+        <div class="slide-meta">
+          <span class="slide-topic">Topic 8: Deployment Readiness</span>
+          <span class="slide-number">11 / 14</span>
+        </div>
+        <h2 class="slide-title">Deployment & Infrastructure Readiness</h2>
+        <p class="slide-subtitle">Production-ready cloud configuration, cross-platform build validation, and CI gates.</p>
+        <div class="slide-body">
+          <div class="col">
+            <div class="card">
+              <div class="card-title">Cross-Platform Build Readiness</div>
+              <ul class="card-list">
+                <li><strong>Android:</strong> Clean Gradle configuration targeting API 21 through 34 (APK & App Bundle ready).</li>
+                <li><strong>iOS:</strong> Clean Xcode workspace configuration supporting iPhone and iPad form factors.</li>
+                <li><strong>Web:</strong> Fast rendering via HTML and CanvasKit renderers for educator desktop dashboards.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="card-title accent">Firebase Infrastructure Provisioning</div>
+              <ul class="card-list">
+                <li><code>firebase.json</code> and <code>.firebaserc</code> configured.</li>
+                <li>Production security rules deployed (<code>firestore.rules</code>, <code>storage.rules</code>).</li>
+                <li>Composite query indexes compiled in <code>firestore.indexes.json</code>.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card">
+              <div class="card-title warm">Security & Compliance Audits</div>
+              <ul class="card-list">
+                <li>Zero API keys embedded in client source code.</li>
+                <li>Compliant with neurodivergent accessibility heuristics.</li>
+                <li>Continuous Integration (CI) test suite passes with zero errors.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 12: Achieved Milestones -->
+      <div class="slide" data-slide="12" data-notes="As shown in our progress timeline, we have successfully reached the 50% midpoint milestone. Across Weeks 1 through 7, we built the complete foundational software stack: problem formulation, sensory UI/UX, clean architecture, authentication, database layer, security rules, and comprehensive automated testing. The system is structurally complete and fully prepared for content expansion and algorithmic intelligence.">
+        <div class="slide-meta">
+          <span class="slide-topic">Topic 9: Achieved Milestones & Current Progress</span>
+          <span class="slide-number">12 / 14</span>
+        </div>
+        <h2 class="slide-title">Achieved Milestones (Weeks 1–7 = 50%)</h2>
+        <p class="slide-subtitle">Systematic execution of the first half of the 14-week project engineering lifecycle.</p>
+        <div class="slide-body">
+          <div class="col">
+            <div class="card">
+              <div class="card-title">Completed Weekly Milestones</div>
+              <ul class="card-list">
+                <li><strong>Week 1:</strong> Problem definition, ASD clinical literature review, sensory requirements.</li>
+                <li><strong>Week 2:</strong> Firebase environment setup, security rules, multi-platform init.</li>
+                <li><strong>Week 3:</strong> Calm design system tokens, pastel color palette, bilingual wireframing.</li>
+                <li><strong>Week 4:</strong> Core UI implementation (Home, Learning, Quiz, Dashboard, Settings).</li>
+                <li><strong>Week 5:</strong> Clean core architecture, unidirectional data flow, Provider state management.</li>
+                <li><strong>Week 6:</strong> Parent authentication, child profile linking, and navigation RouteGuard.</li>
+                <li><strong>Week 7:</strong> Live Cloud Firestore and Storage data layer, composite indexes, 95 tests.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card">
+              <div class="card-title accent">Milestone Completion Status: 50%</div>
+              <div style="background: rgba(255,255,255,0.08); height: 16px; border-radius: 8px; overflow: hidden; margin: 1rem 0;">
+                <div style="background: linear-gradient(90deg, #38BDF8, #34D399); width: 50%; height: 100%;"></div>
+              </div>
+              <p style="font-size: 0.9rem; color: #CBD5E1; line-height: 1.5;">
+                The complete architectural, visual, navigational, and database foundation is locked, verified, and operational.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 13: Remaining Work -->
+      <div class="slide" data-slide="13" data-notes="Looking ahead to the second half of the project: In Week 8, we will ingest our complete vocabulary catalog with native audio pronunciations. In Weeks 9 and 10, we will implement the Item Response Theory adaptive engine to calibrate exercise difficulty to each child's cognitive pace. In Week 12, we will connect our GenAI Cloud Functions. Finally, in Week 13, we will conduct usability trials with special education teachers and parents, culminating in our final graduation defense in Week 14.">
+        <div class="slide-meta">
+          <span class="slide-topic">Topic 10: Remaining Work & Plan to Completion</span>
+          <span class="slide-number">13 / 14</span>
+        </div>
+        <h2 class="slide-title">Roadmap to Final Defense (Weeks 8–14)</h2>
+        <p class="slide-subtitle">Clear, structured path to final graduation evaluation and clinical testing.</p>
+        <div class="slide-body">
+          <div class="col">
+            <div class="card">
+              <div class="card-title">Second-Half Development Plan</div>
+              <ul class="card-list">
+                <li><strong>Week 8:</strong> Comprehensive vocabulary dictionary ingestion & studio pronunciation audio.</li>
+                <li><strong>Week 9:</strong> Closed-loop Adaptive Engine (Item Response Theory & Spaced Repetition).</li>
+                <li><strong>Week 10:</strong> Advanced assessment suite & calibrated positive sensory reinforcement.</li>
+                <li><strong>Week 11:</strong> Analytics visualizations, mastery rate graphs, and parent PDF exports.</li>
+                <li><strong>Week 12:</strong> GenAI Cloud Functions integration under Zero Key Exposure rule.</li>
+                <li><strong>Week 13:</strong> Usability & clinical validation pilot with ASD educators and parents.</li>
+                <li><strong>Week 14:</strong> Final performance optimization, documentation freeze, and graduation defense.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card">
+              <div class="card-title warm">Risk Mitigation Strategy</div>
+              <ul class="card-list">
+                <li><strong>Offline Redundancy:</strong> Offline local asset fallback prevents network failures during live clinical trials.</li>
+                <li><strong>Safety Gatekeeper:</strong> AI exercises are strictly validated against predetermined vocabulary dictionaries to prevent hallucinations.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 14: Conclusion & Q&A -->
+      <div class="slide" data-slide="14" data-notes="To conclude: The GenAI Adaptive Learning Assistant is more than a technical graduation project—it is an empathetic, scientifically informed assistive tool designed to empower neurodivergent children. With a solid architecture, complete database layer, zero static analysis issues, and 95 passing tests, we are fully on track for an impactful completion. We thank the committee for their time and guidance, and we are now delighted to present a live demonstration and take your questions.">
+        <div class="title-slide-content">
+          <div class="title-badge-row">
+            <span class="pill-badge">✅ Mid-Evaluation Ready</span>
+            <span class="pill-badge">🚀 95/95 Passing Tests</span>
+            <span class="pill-badge">🎯 On Schedule for Week 14 Defense</span>
+          </div>
+          <h1 class="main-hero-title">Conclusion & Live Demonstration</h1>
+          <p class="main-hero-subtitle">
+            Transforming neurodivergent education through calm, adaptive, and scientifically grounded technology.
+          </p>
+          <div class="card" style="max-width: 650px; text-align: left; margin: 1rem 0;">
+            <div class="card-title accent">Live Demonstration Highlights</div>
+            <ul class="card-list">
+              <li>1. Dynamic bilingual RTL (Arabic with diacritics) & LTR (English) instant switching.</li>
+              <li>2. Multi-sensory flashcard learning with native audio pronunciation.</li>
+              <li>3. Gentle, non-punitive 3-option quiz interaction with star rewards.</li>
+              <li>4. Parent authentication barrier, student selection, and sensory settings controls.</li>
+            </ul>
+          </div>
+          <h3 style="color: var(--primary-light); font-weight: 700; margin-top: 0.5rem;">Thank You! We welcome questions from the examination committee.</h3>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Speaker Notes Drawer -->
+    <div class="notes-drawer" id="notesDrawer">
+      <div class="notes-header">
+        <span class="notes-title">🎙️ Presenter Script & Key Talking Points</span>
+        <span style="font-size:0.8rem; color:#94A3B8;">(Click Presenter Script button to close)</span>
+      </div>
+      <p class="notes-text" id="notesContent"></p>
+    </div>
+  </main>
+
+  <!-- Footer Navigation -->
+  <footer>
+    <div style="display:flex; gap: 8px;">
+      <button class="btn" id="prevSlideBtn">◀ Previous</button>
+      <button class="btn btn-primary" id="nextSlideBtn">Next ▶</button>
+    </div>
+    <div class="progress-bar-container">
+      <div class="progress-bar-fill" id="progressBar"></div>
+    </div>
+    <div class="keyboard-hint">
+      Use <span class="kbd">←</span> <span class="kbd">→</span> keys or Spacebar to navigate · Press <span class="kbd">N</span> for speaker notes
+    </div>
+  </footer>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const totalSlides = slides.length;
+    let currentSlide = 0;
+
+    const prevBtn = document.getElementById('prevSlideBtn');
+    const nextBtn = document.getElementById('nextSlideBtn');
+    const progressBar = document.getElementById('progressBar');
+    const notesDrawer = document.getElementById('notesDrawer');
+    const notesContent = document.getElementById('notesContent');
+    const toggleNotesBtn = document.getElementById('toggleNotesBtn');
+    const toggleFullscreenBtn = document.getElementById('toggleFullscreenBtn');
+
+    function updateSlide(index) {
+      if (index < 0) index = 0;
+      if (index >= totalSlides) index = totalSlides - 1;
+      currentSlide = index;
+
+      slides.forEach((s, i) => {
+        s.classList.toggle('active', i === currentSlide);
+      });
+
+      // Update progress bar
+      const pct = ((currentSlide + 1) / totalSlides) * 100;
+      progressBar.style.width = pct + '%';
+
+      // Update notes
+      const notes = slides[currentSlide].getAttribute('data-notes') || 'No speaker notes for this slide.';
+      notesContent.textContent = notes;
+    }
+
+    prevBtn.addEventListener('click', () => updateSlide(currentSlide - 1));
+    nextBtn.addEventListener('click', () => updateSlide(currentSlide + 1));
+
+    toggleNotesBtn.addEventListener('click', () => {
+      notesDrawer.classList.toggle('open');
+    });
+
+    toggleFullscreenBtn.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    });
+
+    // Keyboard navigation
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        updateSlide(currentSlide + 1);
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        updateSlide(currentSlide - 1);
+      } else if (e.key === 'n' || e.key === 'N') {
+        notesDrawer.classList.toggle('open');
+      } else if (e.key === 'f' || e.key === 'F') {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen();
+        } else {
+          document.exitFullscreen();
+        }
+      }
+    });
+
+    // Initialize
+    updateSlide(0);
+  </script>
+</body>
+</html>

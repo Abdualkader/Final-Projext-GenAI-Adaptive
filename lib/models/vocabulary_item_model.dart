@@ -1,3 +1,5 @@
+import '../core/utils/content_validator.dart';
+
 /// Model representing an individual vocabulary flashcard item.
 /// Fully aligns with the Firestore database schema (Collection: 'vocabularyItems')
 /// while preserving backward compatibility with Week 4 UI widgets.
@@ -40,6 +42,9 @@ class VocabularyItemModel {
   String get imagePath => imageUrl;
   String get audioPathEn => audioUrlEn;
   String get audioPathAr => audioUrlAr;
+
+  /// Content validation conforming to Week 8 specifications.
+  bool get isValid => ContentValidator.isValidVocabularyItem(this);
 
   String localizedWord(bool isArabic) => isArabic ? labelAr : labelEn;
 
