@@ -44,6 +44,14 @@ class AppLocalizations {
       'btn_listen': 'Play Audio',
       'btn_previous': 'Previous',
       'btn_next': 'Next',
+      'btn_complete_session': 'Complete Session 🌟',
+      'session_completed_title': 'Session Complete! 🌟',
+      'session_completed_subtitle': 'You learned all words in this category!',
+      'btn_start_quiz': 'Start Quiz 🎯',
+      'btn_return_home': 'Return Home 🏠',
+      'inactivity_reminder': "Let's listen again! 🔊",
+      'item_indicator': 'Item {0} of {1}',
+      'words_learned': '{0} words learned!',
       'progress_label': '{0} / {1}',
 
       // Interactive Quiz Screen
@@ -63,6 +71,16 @@ class AppLocalizations {
       'feedback_gentle_retry_title': "Good effort! 🌱",
       'feedback_gentle_retry_subtitle': "Let's try another one together!",
       'points_counter': 'Stars',
+      'quiz_progress': 'Question {0} of {1}',
+      'quiz_timer_seconds': '{0}s',
+      'quiz_timeout_title': "Time's up! Let's keep going 🌱",
+      'quiz_timeout_subtitle': 'Moving peacefully to the next question!',
+      'quiz_completed_title': 'Quiz Complete! 🌟',
+      'quiz_completed_subtitle': 'Amazing effort! You finished the quiz!',
+      'quiz_score_summary': 'You got {0} out of {1} right!',
+      'btn_play_again': 'Play Again 🔄',
+      'btn_next_question': 'Next Question ➡️',
+      'btn_finish_quiz': 'Finish Quiz 🏁',
 
       // Parent & Educator Portal (Login & Validation)
       'parent_portal': 'Parent & Educator Portal',
@@ -146,6 +164,14 @@ class AppLocalizations {
       'btn_listen': 'استمع للنطق',
       'btn_previous': 'السابق',
       'btn_next': 'التالي',
+      'btn_complete_session': 'إنهاء الجلسة 🌟',
+      'session_completed_title': 'اكتملت الجلسة بنجاح! 🌟',
+      'session_completed_subtitle': 'أحسنت يا بطل! لقد أتممت تعلم جميع الكلمات!',
+      'btn_start_quiz': 'ابدأ الاختبار 🎯',
+      'btn_return_home': 'العودة للرئيسية 🏠',
+      'inactivity_reminder': 'هيا نستمع للنطق مرة أخرى! 🔊',
+      'item_indicator': 'المفردة {0} من {1}',
+      'words_learned': '{0} كلمات تم تعلمها!',
       'progress_label': '{0} / {1}',
 
       // Interactive Quiz Screen
@@ -165,6 +191,16 @@ class AppLocalizations {
       'feedback_gentle_retry_title': 'محاولة جميلة! هيا نجرب معاً! 🌱',
       'feedback_gentle_retry_subtitle': 'انظر بهدوء للصورة، أنت قادر على معرفتها!',
       'points_counter': 'النجوم',
+      'quiz_progress': 'السؤال {0} من {1}',
+      'quiz_timer_seconds': '{0} ث',
+      'quiz_timeout_title': 'انتهى الوقت! هيا نتابع بهدوء 🌱',
+      'quiz_timeout_subtitle': 'ننتقل بلطف إلى السؤال التالي!',
+      'quiz_completed_title': 'اكتمل الاختبار بنجاح! 🌟',
+      'quiz_completed_subtitle': 'عمل رائع جداً! لقد أكملت الاختبار يا بطل!',
+      'quiz_score_summary': 'أجبت عن {0} من {1} بشكل صحيح!',
+      'btn_play_again': 'إعادة اللعب 🔄',
+      'btn_next_question': 'السؤال التالي ➡️',
+      'btn_finish_quiz': 'إنهاء الاختبار 🏁',
 
       // Parent & Educator Portal (Login & Validation)
       'parent_portal': 'بوابة الوالدين والمعلمين',
@@ -234,6 +270,14 @@ class AppLocalizations {
     return _localizedValues[locale.languageCode]?[key] ??
         _localizedValues['en']?[key] ??
         key;
+  }
+
+  String textWithArgs(String key, List<String> args) {
+    String value = text(key);
+    for (int i = 0; i < args.length; i++) {
+      value = value.replaceAll('{$i}', args[i]);
+    }
+    return value;
   }
 }
 

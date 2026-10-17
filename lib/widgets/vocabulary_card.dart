@@ -23,9 +23,12 @@ class VocabularyCard extends StatelessWidget {
   final bool hasPrevious;
   final bool hasNext;
   final String nextButtonLabel;
+  final IconData? nextButtonIcon;
   final String audioButtonLabel;
   final bool isArabic;
   final bool isPlayingAudio;
+  final Widget? reminderWidget;
+  final VoidCallback? onCardTap;
 
   const VocabularyCard({
     super.key,
@@ -38,19 +41,29 @@ class VocabularyCard extends StatelessWidget {
     this.hasPrevious = true,
     this.hasNext = true,
     this.nextButtonLabel = 'Next',
+    this.nextButtonIcon,
     this.audioButtonLabel = 'Play Audio',
     this.isArabic = false,
     this.isPlayingAudio = false,
+    this.reminderWidget,
+    this.onCardTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
+        if (reminderWidget != null) ...[
+          reminderWidget!,
+          const SizedBox(height: AppDimensions.spaceS),
+        ],
         // Main Flashcard Frame
         Expanded(
-          child: Container(
-            width: double.infinity,
+          child: GestureDetector(
+            onTap: onCardTap,
+            behavior: HitTestBehavior.translucent,
+            child: Container(
+              width: double.infinity,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: AppDimensions.largeCardBorderRadius,
@@ -153,6 +166,7 @@ class VocabularyCard extends StatelessWidget {
             ),
           ),
         ),
+        ),
         const SizedBox(height: AppDimensions.spaceM),
 
         // Central Audio Action Button (Task 10 & 11)
@@ -227,7 +241,7 @@ class VocabularyCard extends StatelessWidget {
             Expanded(
               child: AppButton(
                 label: nextButtonLabel,
-                icon: Icons.arrow_forward_rounded,
+                icon: nextButtonIcon ?? Icons.arrow_forward_rounded,
                 height: 52,
                 backgroundColor: const Color(0xFF10B981),
                 onPressed: onNext,

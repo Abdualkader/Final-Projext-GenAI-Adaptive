@@ -124,4 +124,11 @@ class VocabularyProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  /// Halts any active audio playback.
+  Future<void> stopAudio() async {
+    _isPlayingAudio = false;
+    await _audioService.stop();
+    notifyListeners();
+  }
 }

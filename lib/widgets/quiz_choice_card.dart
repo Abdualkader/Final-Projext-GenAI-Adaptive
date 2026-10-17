@@ -52,24 +52,10 @@ class QuizChoiceCard extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Illustration area
+              // Image or illustration area (Week 10 Task 4)
               Expanded(
                 child: Center(
-                  child: Container(
-                    width: 78,
-                    height: 78,
-                    decoration: BoxDecoration(
-                      color: choice.accentColor.withOpacity(0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Icon(
-                        choice.icon,
-                        size: 44,
-                        color: choice.accentColor,
-                      ),
-                    ),
-                  ),
+                  child: _buildChoiceImage(choice),
                 ),
               ),
               // Option Label
@@ -113,6 +99,55 @@ class QuizChoiceCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  /// Resolves image URL with calm aspect-ratio presentation and quiet fallback (Task 4).
+  Widget _buildChoiceImage(QuizChoice choice) {
+    final rawUrl = choice.imageUrl.trim();
+    if (rawUrl.isNotEmpty) {
+      if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusM),
+          child: Image.network(
+            rawUrl,
+            width: 76,
+            height: 76,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => _buildIconFallback(choice),
+          ),
+        );
+      } else if (rawUrl.startsWith('assets/')) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusM),
+          child: Image.asset(
+            rawUrl,
+            width: 76,
+            height: 76,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => _buildIconFallback(choice),
+          ),
+        );
+      }
+    }
+    return _buildIconFallback(choice);
+  }
+
+  Widget _buildIconFallback(QuizChoice choice) {
+    return Container(
+      width: 78,
+      height: 78,
+      decoration: BoxDecoration(
+        color: choice.accentColor.withOpacity(0.12),
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Icon(
+          choice.icon,
+          size: 44,
+          color: choice.accentColor,
         ),
       ),
     );
