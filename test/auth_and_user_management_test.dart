@@ -187,6 +187,29 @@ class FakeUserRepository implements UserRepository {
     final children = _children[parentId] ?? const [];
     return children.map((c) => c.childId).toList();
   }
+
+  @override
+  Future<ChildModel?> getChildById(String childId) async {
+    for (final list in _children.values) {
+      for (final child in list) {
+        if (child.childId == childId) return child;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Future<void> updateChildDifficulty(String childId, int newDifficulty) async {
+    for (final entry in _children.entries) {
+      final index = entry.value.indexWhere((c) => c.childId == childId);
+      if (index != -1) {
+        entry.value[index] = entry.value[index].copyWith(
+          currentDifficultyLevel: newDifficulty,
+        );
+        return;
+      }
+    }
+  }
 }
 
 Widget _buildTestApp(Widget child, [Locale locale = const Locale('en')]) {

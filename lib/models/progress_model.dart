@@ -124,6 +124,11 @@ class StudentProgressModel {
   final int overallAccuracy;
   final List<CategoryAccuracy> categoryAccuracies;
   final List<SessionRecord> recentSessions;
+  final List<String> itemsMastered;
+  final int masteredCount;
+  final int weeklyFrequency;
+  final String activeCategoryFilter;
+  final String activeDateFilter;
 
   const StudentProgressModel({
     required this.studentName,
@@ -134,5 +139,102 @@ class StudentProgressModel {
     required this.overallAccuracy,
     required this.categoryAccuracies,
     required this.recentSessions,
+    this.itemsMastered = const [],
+    this.masteredCount = 18,
+    this.weeklyFrequency = 4,
+    this.activeCategoryFilter = 'all',
+    this.activeDateFilter = 'all',
   });
+
+  /// True when the child has no learning sessions or quiz results.
+  bool get isEmpty =>
+      totalSessions == 0 &&
+      recentSessions.isEmpty &&
+      itemsMastered.isEmpty &&
+      overallAccuracy == 0;
+
+  /// Creates an empty progress record for a new child with no learning history.
+  factory StudentProgressModel.empty({
+    String studentName = '',
+    int studentAge = 5,
+    String interestBadgeEn = '',
+    String interestBadgeAr = '',
+  }) {
+    return StudentProgressModel(
+      studentName: studentName,
+      studentAge: studentAge,
+      interestBadgeEn: interestBadgeEn,
+      interestBadgeAr: interestBadgeAr,
+      totalSessions: 0,
+      overallAccuracy: 0,
+      categoryAccuracies: const [
+        CategoryAccuracy(
+          categoryEn: 'Letters',
+          categoryAr: 'الحروف',
+          accuracy: 0,
+          color: Color(0xFF9C27B0),
+          icon: Icons.sort_by_alpha,
+        ),
+        CategoryAccuracy(
+          categoryEn: 'Numbers',
+          categoryAr: 'الأرقام',
+          accuracy: 0,
+          color: Color(0xFF2196F3),
+          icon: Icons.format_list_numbered,
+        ),
+        CategoryAccuracy(
+          categoryEn: 'Colors',
+          categoryAr: 'الألوان',
+          accuracy: 0,
+          color: Color(0xFFFFB300),
+          icon: Icons.palette,
+        ),
+        CategoryAccuracy(
+          categoryEn: 'Animals',
+          categoryAr: 'الحيوانات',
+          accuracy: 0,
+          color: Color(0xFF4CAF50),
+          icon: Icons.pets,
+        ),
+      ],
+      recentSessions: const [],
+      itemsMastered: const [],
+      masteredCount: 0,
+      weeklyFrequency: 0,
+      activeCategoryFilter: 'all',
+      activeDateFilter: 'all',
+    );
+  }
+
+  StudentProgressModel copyWith({
+    String? studentName,
+    int? studentAge,
+    String? interestBadgeEn,
+    String? interestBadgeAr,
+    int? totalSessions,
+    int? overallAccuracy,
+    List<CategoryAccuracy>? categoryAccuracies,
+    List<SessionRecord>? recentSessions,
+    List<String>? itemsMastered,
+    int? masteredCount,
+    int? weeklyFrequency,
+    String? activeCategoryFilter,
+    String? activeDateFilter,
+  }) {
+    return StudentProgressModel(
+      studentName: studentName ?? this.studentName,
+      studentAge: studentAge ?? this.studentAge,
+      interestBadgeEn: interestBadgeEn ?? this.interestBadgeEn,
+      interestBadgeAr: interestBadgeAr ?? this.interestBadgeAr,
+      totalSessions: totalSessions ?? this.totalSessions,
+      overallAccuracy: overallAccuracy ?? this.overallAccuracy,
+      categoryAccuracies: categoryAccuracies ?? this.categoryAccuracies,
+      recentSessions: recentSessions ?? this.recentSessions,
+      itemsMastered: itemsMastered ?? this.itemsMastered,
+      masteredCount: masteredCount ?? this.masteredCount,
+      weeklyFrequency: weeklyFrequency ?? this.weeklyFrequency,
+      activeCategoryFilter: activeCategoryFilter ?? this.activeCategoryFilter,
+      activeDateFilter: activeDateFilter ?? this.activeDateFilter,
+    );
+  }
 }

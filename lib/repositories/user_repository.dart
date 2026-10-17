@@ -12,6 +12,8 @@ abstract class UserRepository {
   Future<List<ChildModel>> getLinkedChildren(String parentId);
   Future<List<String>> getLinkedChildIds(String parentId);
   Future<void> addChildProfile(String parentId, ChildModel child);
+  Future<ChildModel?> getChildById(String childId);
+  Future<void> updateChildDifficulty(String childId, int newDifficulty);
 }
 
 /// Base implementation of [UserRepository] communicating through [FirestoreService].
@@ -145,6 +147,66 @@ class BaseUserRepository implements UserRepository {
     if (user != null && !user.linkedChildIds.contains(child.childId)) {
       final updatedChildIds = [...user.linkedChildIds, child.childId];
       await saveUser(user.copyWith(linkedChildIds: updatedChildIds));
+    }
+  }
+
+  @override
+  Future<ChildModel?> getChildById(String childId) async {
+    try {
+      final doc = await _firestoreService.getDocument(
+        FirebaseCollections.children,
+        childId,
+      );
+      if (doc != null && doc.exists && doc.data() != null) {
+        final child = ChildModel.fromMap(doc.data()!, id: doc.id);
+        _inMemoryChildren[childId] = child;
+        return child;
+      }
+    } catch (_) {
+      // Fallback
+    }
+
+    if (_inMemoryChildren.containsKey(childId)) {
+      return _inMemoryChildren[childId];
+    }
+
+    final match = SampleDataService.sampleChildren
+        .where((c) => c.childId == childId)
+        .firstOrNull;
+    if (match != null) {
+      _inMemoryChildren[childId] = match;
+      return match;
+    }
+
+    return null;
+  }
+
+  @override
+  Future<void> updateChildDifficulty(String childId, int newDifficulty) async {
+    final clamped = newDifficulty.clamp(1, 3);
+    final existing = await getChildById(childId);
+    if (existing != null) {
+      final updated = existing.copyWith(currentDifficultyLevel: clamped);
+      _inMemoryChildren[childId] = updated;
+    }
+
+    try {
+      await _firestoreService.updateDocument(
+        FirebaseCollections.children,
+        childId,
+        {'currentDifficultyLevel': clamped},
+      );
+    } catch (_) {
+      try {
+        await _firestoreService.setDocument(
+          FirebaseCollections.children,
+          childId,
+          {'currentDifficultyLevel': clamped},
+          merge: true,
+        );
+      } catch (_) {
+        // Saved in-memory
+      }
     }
   }
 }

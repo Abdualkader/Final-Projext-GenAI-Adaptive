@@ -24,83 +24,380 @@ exports.healthCheck = onCall((request) => {
   };
 });
 
+// Canonical Whitelisted Educational Vocabulary Domain for Children with ASD (Task 13)
+const VOCABULARY_DOMAIN = {
+  animals: [
+    { id: "cat", labelEn: "Cat", labelAr: "قطة", difficulty: 1 },
+    { id: "dog", labelEn: "Dog", labelAr: "كلب", difficulty: 1 },
+    { id: "bird", labelEn: "Bird", labelAr: "عصفور", difficulty: 1 },
+    { id: "cow", labelEn: "Cow", labelAr: "بقرة", difficulty: 2 },
+    { id: "lion", labelEn: "Lion", labelAr: "أسد", difficulty: 2 },
+    { id: "elephant", labelEn: "Elephant", labelAr: "فيل", difficulty: 3 }
+  ],
+  colors: [
+    { id: "red", labelEn: "Red", labelAr: "أحمر", difficulty: 1 },
+    { id: "blue", labelEn: "Blue", labelAr: "أزرق", difficulty: 1 },
+    { id: "green", labelEn: "Green", labelAr: "أخضر", difficulty: 1 },
+    { id: "yellow", labelEn: "Yellow", labelAr: "أصفر", difficulty: 2 },
+    { id: "orange", labelEn: "Orange", labelAr: "برتقالي", difficulty: 2 },
+    { id: "purple", labelEn: "Purple", labelAr: "بنفسجي", difficulty: 3 }
+  ],
+  numbers: [
+    { id: "one", labelEn: "One", labelAr: "واحد", difficulty: 1 },
+    { id: "two", labelEn: "Two", labelAr: "اثنان", difficulty: 1 },
+    { id: "three", labelEn: "Three", labelAr: "ثلاثة", difficulty: 1 },
+    { id: "four", labelEn: "Four", labelAr: "أربعة", difficulty: 2 },
+    { id: "five", labelEn: "Five", labelAr: "خمسة", difficulty: 3 }
+  ],
+  letters: [
+    { id: "alef", labelEn: "Alef (A)", labelAr: "ألف (أ)", difficulty: 1 },
+    { id: "baa", labelEn: "Baa (B)", labelAr: "باء (ب)", difficulty: 1 },
+    { id: "taa", labelEn: "Taa (T)", labelAr: "تاء (ت)", difficulty: 1 },
+    { id: "thaa", labelEn: "Thaa (Th)", labelAr: "ثاء (ث)", difficulty: 2 },
+    { id: "jeem", labelEn: "Jeem (J)", labelAr: "جيم (ج)", difficulty: 3 }
+  ]
+};
+
+// Verified Educational Fallback Bank (Task 6 & Task 15)
+const FALLBACK_EXERCISE_BANKS = {
+  animals: {
+    1: {
+      exerciseType: "identify_item",
+      promptEn: "Where is the Cat?",
+      promptAr: "أين القطة؟",
+      correctChoiceId: "cat",
+      choices: [
+        { id: "cat", labelEn: "Cat", labelAr: "قطة" },
+        { id: "dog", labelEn: "Dog", labelAr: "كلب" },
+        { id: "bird", labelEn: "Bird", labelAr: "عصفور" }
+      ]
+    },
+    2: {
+      exerciseType: "select_correct_image",
+      promptEn: "Find the Cow",
+      promptAr: "اختر صورة البقرة",
+      correctChoiceId: "cow",
+      choices: [
+        { id: "cow", labelEn: "Cow", labelAr: "بقرة" },
+        { id: "lion", labelEn: "Lion", labelAr: "أسد" },
+        { id: "cat", labelEn: "Cat", labelAr: "قطة" }
+      ]
+    },
+    3: {
+      exerciseType: "match_word_image",
+      promptEn: "Which animal is the Elephant?",
+      promptAr: "أي حيوان هو الفيل؟",
+      correctChoiceId: "elephant",
+      choices: [
+        { id: "elephant", labelEn: "Elephant", labelAr: "فيل" },
+        { id: "lion", labelEn: "Lion", labelAr: "أسد" },
+        { id: "cow", labelEn: "Cow", labelAr: "بقرة" }
+      ]
+    }
+  },
+  colors: {
+    1: {
+      exerciseType: "identify_item",
+      promptEn: "Select the Blue color",
+      promptAr: "اختر اللون الأزرق",
+      correctChoiceId: "blue",
+      choices: [
+        { id: "blue", labelEn: "Blue", labelAr: "أزرق" },
+        { id: "red", labelEn: "Red", labelAr: "أحمر" },
+        { id: "green", labelEn: "Green", labelAr: "أخضر" }
+      ]
+    },
+    2: {
+      exerciseType: "choose_between_items",
+      promptEn: "Where is the Yellow color?",
+      promptAr: "أين اللون الأصفر؟",
+      correctChoiceId: "yellow",
+      choices: [
+        { id: "yellow", labelEn: "Yellow", labelAr: "أصفر" },
+        { id: "orange", labelEn: "Orange", labelAr: "برتقالي" },
+        { id: "blue", labelEn: "Blue", labelAr: "أزرق" }
+      ]
+    },
+    3: {
+      exerciseType: "match_word_image",
+      promptEn: "Pick the Purple color",
+      promptAr: "اختر اللون البنفسجي",
+      correctChoiceId: "purple",
+      choices: [
+        { id: "purple", labelEn: "Purple", labelAr: "بنفسجي" },
+        { id: "orange", labelEn: "Orange", labelAr: "برتقالي" },
+        { id: "yellow", labelEn: "Yellow", labelAr: "أصفر" }
+      ]
+    }
+  },
+  numbers: {
+    1: {
+      exerciseType: "identify_item",
+      promptEn: "Where is number One?",
+      promptAr: "أين الرقم واحد؟",
+      correctChoiceId: "one",
+      choices: [
+        { id: "one", labelEn: "One", labelAr: "واحد" },
+        { id: "two", labelEn: "Two", labelAr: "اثنان" },
+        { id: "three", labelEn: "Three", labelAr: "ثلاثة" }
+      ]
+    },
+    2: {
+      exerciseType: "select_correct_image",
+      promptEn: "Find number Four",
+      promptAr: "اختر الرقم أربعة",
+      correctChoiceId: "four",
+      choices: [
+        { id: "four", labelEn: "Four", labelAr: "أربعة" },
+        { id: "three", labelEn: "Three", labelAr: "ثلاثة" },
+        { id: "two", labelEn: "Two", labelAr: "اثنان" }
+      ]
+    },
+    3: {
+      exerciseType: "choose_between_items",
+      promptEn: "Which one is number Five?",
+      promptAr: "أي رقم هو خمسة؟",
+      correctChoiceId: "five",
+      choices: [
+        { id: "five", labelEn: "Five", labelAr: "خمسة" },
+        { id: "four", labelEn: "Four", labelAr: "أربعة" },
+        { id: "three", labelEn: "Three", labelAr: "ثلاثة" }
+      ]
+    }
+  },
+  letters: {
+    1: {
+      exerciseType: "identify_item",
+      promptEn: "Where is letter Alef?",
+      promptAr: "أين حرف الألف؟",
+      correctChoiceId: "alef",
+      choices: [
+        { id: "alef", labelEn: "Alef (A)", labelAr: "ألف (أ)" },
+        { id: "baa", labelEn: "Baa (B)", labelAr: "باء (ب)" },
+        { id: "taa", labelEn: "Taa (T)", labelAr: "تاء (ت)" }
+      ]
+    },
+    2: {
+      exerciseType: "select_correct_image",
+      promptEn: "Find letter Thaa",
+      promptAr: "اختر حرف الثاء",
+      correctChoiceId: "thaa",
+      choices: [
+        { id: "thaa", labelEn: "Thaa (Th)", labelAr: "ثاء (ث)" },
+        { id: "taa", labelEn: "Taa (T)", labelAr: "تاء (ت)" },
+        { id: "baa", labelEn: "Baa (B)", labelAr: "باء (ب)" }
+      ]
+    },
+    3: {
+      exerciseType: "match_word_image",
+      promptEn: "Which one is letter Jeem?",
+      promptAr: "أي حرف هو الجيم؟",
+      correctChoiceId: "jeem",
+      choices: [
+        { id: "jeem", labelEn: "Jeem (J)", labelAr: "جيم (ج)" },
+        { id: "thaa", labelEn: "Thaa (Th)", labelAr: "ثاء (ث)" },
+        { id: "alef", labelEn: "Alef (A)", labelAr: "ألف (أ)" }
+      ]
+    }
+  }
+};
+
 /**
- * AI Adaptive Exercise Proxy (Backend Preparation for AI/NLP)
+ * Validates AI Exercise Schema (Task 5 & Task 13)
+ * Rejects any malformed exercise, wrong choice count, missing correct answer,
+ * or items outside the educational domain.
+ */
+function validateAiExercise(exercise, categoryId, difficultyLevel) {
+  if (!exercise || typeof exercise !== "object") return false;
+  if (!exercise.promptEn || typeof exercise.promptEn !== "string") return false;
+  if (!exercise.promptAr || typeof exercise.promptAr !== "string") return false;
+  if (!exercise.correctChoiceId || typeof exercise.correctChoiceId !== "string") return false;
+  if (!Array.isArray(exercise.choices) || exercise.choices.length !== 3) return false;
+
+  // Verify correctChoiceId is among the 3 choices
+  const choiceIds = exercise.choices.map((c) => c && c.id);
+  if (!choiceIds.includes(exercise.correctChoiceId)) return false;
+
+  // Verify domain adherence (Task 13: strictly whitelisted educational vocabulary)
+  const categoryVocab = VOCABULARY_DOMAIN[categoryId] || [];
+  const validDomainIds = new Set(categoryVocab.map((v) => v.id));
+
+  for (const choice of exercise.choices) {
+    if (!choice || typeof choice !== "object") return false;
+    if (!choice.id || !choice.labelEn || !choice.labelAr) return false;
+    if (validDomainIds.size > 0 && !validDomainIds.has(choice.id)) {
+      // Reject hallucinated vocabulary outside curriculum
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Generates an educational exercise using Gemini / External AI or Safe Fallback
  * 
- * ARCHITECTURE PRINCIPLE:
- * Private AI API keys (e.g., Gemini / OpenAI) remain strictly server-side.
- * The Flutter client calls this function, which orchestrates the AI request,
- * validates the schema, and returns safe structured content.
+ * ARCHITECTURE PRINCIPLES (Tasks 2, 3, 13, 14, 16):
+ * 1. AI API keys are stored solely in backend secrets/environment.
+ * 2. Flutter receives only validated educational exercises.
+ * 3. No PII (names, emails, credentials) is transmitted to AI.
+ * 4. Safe logging without sensitive credentials.
  */
 exports.generateAdaptiveExercise = onCall(async (request) => {
+  const startTime = Date.now();
   const data = request.data || {};
-  const categoryId = data.categoryId || "animals";
-  const difficultyLevel = data.difficultyLevel || 1;
-  const preferredLanguage = data.preferredLanguage || "ar";
+
+  // Task 14: Privacy Sanitization - Strictly discard any personal information
+  const categoryId = ["animals", "colors", "numbers", "letters"].includes(data.categoryId)
+    ? data.categoryId
+    : "animals";
+
+  // Task 8: Difficulty Boundaries - 1 (Easy), 2 (Medium), 3 (Hard)
+  let difficultyLevel = parseInt(data.difficultyLevel, 10);
+  if (isNaN(difficultyLevel) || difficultyLevel < 1) difficultyLevel = 1;
+  if (difficultyLevel > 3) difficultyLevel = 3;
+
+  const preferredLanguage = data.preferredLanguage === "ar" ? "ar" : "en";
+  const exerciseType = [
+    "identify_item",
+    "select_correct_image",
+    "match_word_image",
+    "choose_between_items"
+  ].includes(data.exerciseType)
+    ? data.exerciseType
+    : "identify_item";
+
+  // Performance context for adaptive tailoring
+  const recentAccuracy = typeof data.recentAccuracy === "number" ? data.recentAccuracy : 0.75;
+
+  // Safe backend audit log (Task 16: No keys, no PII)
+  console.log(
+    `[AI Adaptive Service] Request -> Category: ${categoryId}, Diff: ${difficultyLevel}, Lang: ${preferredLanguage}, Type: ${exerciseType}, Accuracy: ${recentAccuracy.toFixed(2)}`
+  );
 
   const apiKey = process.env.GENAI_API_KEY;
 
   if (apiKey) {
-    // Real GenAI API Integration Path (when API key is populated in Cloud Functions secrets)
     try {
-      // Future integration: invoke LLM API with strict JSON schema
-      return {
-        isMock: false,
-        source: "GenAI-Live-API",
-        categoryId: categoryId,
-        question: preferredLanguage === "ar" ? "أين القطة؟" : "Where is the cat?",
-        targetItemId: "cat_01",
-        options: ["cat_01", "dog_01", "bird_01"],
-        difficultyLevel: difficultyLevel,
-        generatedAt: new Date().toISOString()
-      };
-    } catch (error) {
-      console.error("AI service error, switching to safe fallback:", error);
-      // Fallback to deterministic curated content if AI fails
+      const allowedVocab = VOCABULARY_DOMAIN[categoryId] || [];
+      const vocabListDescription = allowedVocab
+        .map((v) => `${v.id} (English: ${v.labelEn}, Arabic: ${v.labelAr})`)
+        .join(", ");
+
+      const systemPrompt = `You are an educational assistant for children with Autism Spectrum Disorder (ASD).
+Create a simple, predictable, gentle multiple-choice exercise.
+Domain category: "${categoryId}".
+Difficulty level: ${difficultyLevel} (1=Easy, 2=Medium, 3=Hard).
+Exercise type: "${exerciseType}".
+Learner accuracy context: ${recentAccuracy.toFixed(2)}.
+Allowed vocabulary pool (USE ONLY THESE ITEMS): [${vocabListDescription}].
+
+Rules:
+1. Provide exactly 3 choices from the allowed vocabulary pool.
+2. Provide non-empty English prompt ("promptEn") and Arabic prompt ("promptAr").
+3. Set "correctChoiceId" to one of the 3 choices.
+4. Output MUST be ONLY valid JSON matching this schema:
+{
+  "promptEn": "Where is the Cat?",
+  "promptAr": "أين القطة؟",
+  "correctChoiceId": "cat",
+  "choices": [
+    {"id": "cat", "labelEn": "Cat", "labelAr": "قطة"},
+    {"id": "dog", labelEn: "Dog", labelAr: "كلب"},
+    {"id": "bird", labelEn: "Bird", labelAr: "عصفور"}
+  ]
+}`;
+
+      // Call Google Generative AI (Gemini REST API) with 5-second timeout controller
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+      const response = await fetch(geminiEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: systemPrompt }] }],
+          generationConfig: {
+            temperature: 0.2, // Low temperature for high predictability (ASD friendly)
+            responseMimeType: "application/json"
+          }
+        })
+      });
+
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const jsonResponse = await response.json();
+        const candidateText =
+          jsonResponse.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (candidateText) {
+          const parsed = JSON.parse(candidateText);
+
+          // Task 5: Rigorous response validation
+          if (validateAiExercise(parsed, categoryId, difficultyLevel)) {
+            const executionDurationMs = Date.now() - startTime;
+            console.log(
+              `[AI Adaptive Service] Generation SUCCESS via GenAI API in ${executionDurationMs}ms`
+            );
+
+            return {
+              id: `ai_${categoryId}_${Date.now()}`,
+              promptEn: parsed.promptEn,
+              promptAr: parsed.promptAr,
+              correctChoiceId: parsed.correctChoiceId,
+              choices: parsed.choices,
+              categoryId: categoryId,
+              difficultyLevel: difficultyLevel,
+              exerciseType: exerciseType,
+              source: "genai_live_api",
+              validated: true,
+              durationMs: executionDurationMs,
+              generatedAt: new Date().toISOString()
+            };
+          } else {
+            console.warn(
+              "[AI Adaptive Service] Validation failed for AI response, activating fallback bank."
+            );
+          }
+        }
+      } else {
+        console.warn(
+          `[AI Adaptive Service] GenAI endpoint returned status ${response.status}, activating fallback bank.`
+        );
+      }
+    } catch (err) {
+      // Task 15 & 16: Safe error handling and logging (no credentials in logs)
+      const errMessage = err.name === "AbortError" ? "Request Timeout" : err.message;
+      console.warn(
+        `[AI Adaptive Service] AI call interrupted (${errMessage}), switching to verified educational fallback.`
+      );
     }
   }
 
-  // Pre-configured Verified Educational Fallback (Mock/Offline Safety Net)
-  // Per graduation project specification: always provide safe fallback templates.
-  const fallbackBanks = {
-    animals: {
-      questionAr: "أين القطة؟",
-      questionEn: "Where is the cat?",
-      targetItem: "cat",
-      options: ["cat", "dog", "cow"]
-    },
-    colors: {
-      questionAr: "اختر اللون الأزرق",
-      questionEn: "Pick the blue color",
-      targetItem: "blue",
-      options: ["blue", "red", "yellow"]
-    },
-    numbers: {
-      questionAr: "أين الرقم واحد؟",
-      questionEn: "Where is number one?",
-      targetItem: "one",
-      options: ["one", "two", "three"]
-    },
-    letters: {
-      questionAr: "أين حرف الألف؟",
-      questionEn: "Where is letter Alef?",
-      targetItem: "alef",
-      options: ["alef", "baa", "taa"]
-    }
-  };
+  // Task 6: Verified Educational Fallback Bank
+  const categoryBank = FALLBACK_EXERCISE_BANKS[categoryId] || FALLBACK_EXERCISE_BANKS.animals;
+  const fallbackExercise = categoryBank[difficultyLevel] || categoryBank[1];
+  const executionDurationMs = Date.now() - startTime;
 
-  const selectedBank = fallbackBanks[categoryId] || fallbackBanks.animals;
+  console.log(
+    `[AI Adaptive Service] Served verified fallback exercise for ${categoryId} (level ${difficultyLevel}) in ${executionDurationMs}ms`
+  );
 
   return {
-    isMock: true,
-    source: "Verified-Educational-Fallback-Bank",
+    id: `fallback_${categoryId}_${Date.now()}`,
+    promptEn: fallbackExercise.promptEn,
+    promptAr: fallbackExercise.promptAr,
+    correctChoiceId: fallbackExercise.correctChoiceId,
+    choices: fallbackExercise.choices,
     categoryId: categoryId,
     difficultyLevel: difficultyLevel,
-    questionAr: selectedBank.questionAr,
-    questionEn: selectedBank.questionEn,
-    targetItem: selectedBank.targetItem,
-    options: selectedBank.options,
-    note: "AI environment prepared. Private keys remain secure on server side.",
+    exerciseType: fallbackExercise.exerciseType,
+    source: "verified_educational_fallback",
+    validated: true,
+    durationMs: executionDurationMs,
     generatedAt: new Date().toISOString()
   };
 });

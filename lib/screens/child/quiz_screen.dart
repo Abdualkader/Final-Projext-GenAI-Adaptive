@@ -13,6 +13,9 @@ import '../../providers/quiz_provider.dart';
 import '../../repositories/mock_data_repository.dart';
 import '../../repositories/quiz_repository.dart';
 import '../../repositories/session_repository.dart';
+import '../../repositories/user_repository.dart';
+import '../../services/adaptive_difficulty_service.dart';
+import '../../services/ai_adaptive_service.dart';
 import '../../services/audio_service.dart';
 import '../../widgets/feedback_banner.dart';
 import '../../widgets/large_icon_button.dart';
@@ -27,6 +30,7 @@ import '../../widgets/quiz_choice_card.dart';
 /// - 60-second peaceful question timer with automatic timeout handling (Task 9)
 /// - Child-friendly quiz completion screen with star awards and score summary (Task 10)
 /// - Difficulty filtering and choice position randomization (Task 11 & 12)
+/// - Week 12: Adaptive Learning and AI-generated exercise integration (Tasks 4, 7, 10, 11)
 class QuizScreen extends StatefulWidget {
   final String categoryId;
   final String childId;
@@ -35,10 +39,14 @@ class QuizScreen extends StatefulWidget {
   final Duration questionTimeoutDuration;
   final bool enableTimer;
   final bool shuffle;
+  final bool useAi;
   final List<QuizQuestionModel>? questions;
   final QuizRepository? quizRepository;
   final SessionRepository? sessionRepository;
   final AudioService? audioService;
+  final AiAdaptiveService? aiAdaptiveService;
+  final AdaptiveDifficultyService? adaptiveDifficultyService;
+  final UserRepository? userRepository;
 
   const QuizScreen({
     super.key,
@@ -49,10 +57,14 @@ class QuizScreen extends StatefulWidget {
     this.questionTimeoutDuration = const Duration(seconds: 60),
     this.enableTimer = false,
     this.shuffle = false,
+    this.useAi = false,
     this.questions,
     this.quizRepository,
     this.sessionRepository,
     this.audioService,
+    this.aiAdaptiveService,
+    this.adaptiveDifficultyService,
+    this.userRepository,
   });
 
   @override
@@ -74,11 +86,14 @@ class _QuizScreenState extends State<QuizScreen> {
   bool _isCompleted = false;
   late String _sessionId;
   DateTime? _questionStartTime;
-
   // 60-Second Peaceful Timer (Task 9)
   Timer? _timer;
   int _remainingSeconds = 60;
   bool _isTimedOut = false;
+
+  // Adaptive Learning State (Week 12 Task 7, 10, 11)
+  AdaptiveEvaluationResult? _adaptiveResult;
+  final List<QuizResultModel> _results = [];
 
   @override
   void initState() {
@@ -253,6 +268,8 @@ class _QuizScreenState extends State<QuizScreen> {
       timestamp: DateTime.now(),
     );
 
+    _results.add(result);
+
     try {
       await _quizRepository.recordQuizResult(result);
     } catch (e) {
@@ -271,6 +288,8 @@ class _QuizScreenState extends State<QuizScreen> {
       responseTimeMs: widget.questionTimeoutDuration.inMilliseconds,
       timestamp: DateTime.now(),
     );
+
+    _results.add(result);
 
     try {
       await _quizRepository.recordQuizResult(result);
@@ -311,6 +330,23 @@ class _QuizScreenState extends State<QuizScreen> {
       endTime: DateTime.now(),
       score: _questions.isEmpty ? 0.0 : (_score / _questions.length),
     );
+
+    // Week 12: Trigger adaptive difficulty adjustment
+    final adaptiveService = widget.adaptiveDifficultyService ?? const AdaptiveDifficultyService();
+    final userRepo = widget.userRepository ?? BaseUserRepository();
+    adaptiveService.updateChildDifficulty(
+      widget.childId,
+      currentDifficulty: widget.maxDifficulty ?? 1,
+      recentResults: _results,
+      userRepository: userRepo,
+      activeCategoryId: _activeCategoryId,
+    ).then((res) {
+      if (mounted) {
+        setState(() {
+          _adaptiveResult = res;
+        });
+      }
+    });
   }
 
   void _restartQuiz() {
@@ -794,6 +830,44 @@ class _QuizScreenState extends State<QuizScreen> {
                   ],
                 ),
               ),
+              if (_adaptiveResult != null) ...[
+                const SizedBox(height: AppDimensions.spaceM),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimensions.spaceM,
+                    vertical: AppDimensions.spaceS,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryContainer,
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusM),
+                    border: Border.all(
+                      color: AppColors.primaryBlue.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.auto_awesome_rounded,
+                        color: AppColors.primaryBlue,
+                        size: 20,
+                      ),
+                      const SizedBox(width: AppDimensions.spaceS),
+                      Flexible(
+                        child: Text(
+                          _adaptiveResult!.localizedExplanation(l10n.isArabic),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const Spacer(),
               // Action Buttons: Play Again & Return Home
               Row(

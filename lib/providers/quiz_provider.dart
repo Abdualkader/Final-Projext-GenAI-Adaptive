@@ -7,21 +7,33 @@ import '../models/quiz_question_model.dart';
 import '../models/quiz_result_model.dart';
 import '../repositories/quiz_repository.dart';
 import '../repositories/session_repository.dart';
+import '../repositories/user_repository.dart';
+import '../services/adaptive_difficulty_service.dart';
+import '../services/ai_adaptive_service.dart';
 import '../services/audio_service.dart';
 
-/// State management controller for interactive quiz assessments and positive reinforcement (Week 10).
+/// State management controller for interactive quiz assessments and positive reinforcement (Week 10 & 12).
 class QuizProvider extends ChangeNotifier {
   final QuizRepository _quizRepository;
   final SessionRepository _sessionRepository;
   final AudioService _audioService;
+  final AiAdaptiveService _aiAdaptiveService;
+  final AdaptiveDifficultyService _adaptiveDifficultyService;
+  final UserRepository _userRepository;
 
   QuizProvider({
     QuizRepository? quizRepository,
     SessionRepository? sessionRepository,
     AudioService? audioService,
+    AiAdaptiveService? aiAdaptiveService,
+    AdaptiveDifficultyService? adaptiveDifficultyService,
+    UserRepository? userRepository,
   })  : _quizRepository = quizRepository ?? BaseQuizRepository(),
         _sessionRepository = sessionRepository ?? BaseSessionRepository(),
-        _audioService = audioService ?? AudioService();
+        _audioService = audioService ?? AudioService(),
+        _aiAdaptiveService = aiAdaptiveService ?? BaseAiAdaptiveService(),
+        _adaptiveDifficultyService = adaptiveDifficultyService ?? const AdaptiveDifficultyService(),
+        _userRepository = userRepository ?? BaseUserRepository();
 
   UiState<QuizQuestionModel> _uiState = const UiState.initial();
   QuizQuestionModel? _question;
@@ -45,6 +57,11 @@ class QuizProvider extends ChangeNotifier {
   Duration _questionTimeoutDuration = const Duration(seconds: 60);
   bool _isTimedOut = false;
 
+  // Adaptive Learning & AI State (Week 12 Tasks 7, 8, 10, 11)
+  int _currentDifficulty = 1;
+  AdaptiveEvaluationResult? _lastAdaptiveResult;
+  bool _isAiAdaptedSession = false;
+
   // Getters
   UiState<QuizQuestionModel> get uiState => _uiState;
   QuizQuestionModel? get question => _question;
@@ -62,6 +79,9 @@ class QuizProvider extends ChangeNotifier {
   int get remainingSeconds => _remainingSeconds;
   Duration get questionTimeoutDuration => _questionTimeoutDuration;
   bool get isTimedOut => _isTimedOut;
+  int get currentDifficulty => _currentDifficulty;
+  AdaptiveEvaluationResult? get lastAdaptiveResult => _lastAdaptiveResult;
+  bool get isAiAdaptedSession => _isAiAdaptedSession;
   List<QuizResultModel> get recordedResults => List.unmodifiable(_recordedResults);
 
   double get accuracyFraction =>
@@ -83,6 +103,8 @@ class QuizProvider extends ChangeNotifier {
     bool shuffle = true,
     Duration timeoutDuration = const Duration(seconds: 60),
     bool enableTimer = true,
+    bool useAi = false,
+    String preferredLanguage = 'en',
   }) async {
     cancelTimer();
     _activeChildId = childId;
@@ -93,8 +115,10 @@ class QuizProvider extends ChangeNotifier {
     _isQuizCompleted = false;
     _isSessionActive = true;
     _isTimedOut = false;
+    _isAiAdaptedSession = useAi;
     _selectedChoiceId = null;
     _recordedResults.clear();
+    _lastAdaptiveResult = null;
     _sessionStartTime = DateTime.now();
     _questionTimeoutDuration = timeoutDuration;
     _remainingSeconds = timeoutDuration.inSeconds;
@@ -102,12 +126,34 @@ class QuizProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final list = await _quizRepository.getQuizQuestionsForCategory(
-        categoryId,
-        count: questionCount,
-        maxDifficulty: maxDifficulty,
-        shuffle: shuffle,
-      );
+      // Determine initial difficulty from profile or parameter
+      final childProfile = await _userRepository.getChildById(childId);
+      _currentDifficulty = (maxDifficulty ?? childProfile?.currentDifficultyLevel ?? 1).clamp(1, 3);
+
+      List<QuizQuestionModel> list = [];
+
+      if (useAi) {
+        // Task 11: Request AI adaptive exercises from Cloud Function with fallback
+        try {
+          list = await _aiAdaptiveService.generateAdaptiveQuizSession(
+            categoryId: categoryId,
+            difficultyLevel: _currentDifficulty,
+            preferredLanguage: preferredLanguage,
+            count: questionCount,
+          );
+        } catch (e) {
+          debugPrint('QuizProvider: AI session generation fallback to repository: $e');
+        }
+      }
+
+      if (list.isEmpty) {
+        list = await _quizRepository.getQuizQuestionsForCategory(
+          categoryId,
+          count: questionCount,
+          maxDifficulty: maxDifficulty,
+          shuffle: shuffle,
+        );
+      }
 
       if (list.isNotEmpty) {
         _questions = list;
@@ -141,6 +187,30 @@ class QuizProvider extends ChangeNotifier {
       );
     }
     notifyListeners();
+  }
+
+  /// Convenience method to start an AI-adapted interactive quiz session (Week 12).
+  Future<void> startAdaptiveQuizSession({
+    required String childId,
+    required String categoryId,
+    int questionCount = 5,
+    int? maxDifficulty,
+    bool shuffle = true,
+    Duration timeoutDuration = const Duration(seconds: 60),
+    bool enableTimer = true,
+    String preferredLanguage = 'en',
+  }) async {
+    await startQuizSession(
+      childId: childId,
+      categoryId: categoryId,
+      questionCount: questionCount,
+      maxDifficulty: maxDifficulty,
+      shuffle: shuffle,
+      timeoutDuration: timeoutDuration,
+      enableTimer: enableTimer,
+      useAi: true,
+      preferredLanguage: preferredLanguage,
+    );
   }
 
   /// Loads a single quiz question for a given category (backwards-compatible with Week 4 & core test).
@@ -293,6 +363,24 @@ class QuizProvider extends ChangeNotifier {
       );
     } catch (e) {
       debugPrint('QuizProvider finish session error: $e');
+    }
+
+    // Task 10 & 11: Evaluate performance and adjust future difficulty adaptively
+    if (_recordedResults.isNotEmpty) {
+      try {
+        _lastAdaptiveResult = await _adaptiveDifficultyService.updateChildDifficulty(
+          _activeChildId,
+          currentDifficulty: _currentDifficulty,
+          recentResults: _recordedResults,
+          userRepository: _userRepository,
+          activeCategoryId: _activeCategoryId,
+        );
+        if (_lastAdaptiveResult != null) {
+          _currentDifficulty = _lastAdaptiveResult!.newDifficulty;
+        }
+      } catch (e) {
+        debugPrint('QuizProvider adaptive difficulty evaluation error: $e');
+      }
     }
 
     notifyListeners();
