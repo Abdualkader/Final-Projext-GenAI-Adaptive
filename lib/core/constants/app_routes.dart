@@ -7,6 +7,8 @@ class AppRoutes {
   static const String childCategories = '/child/categories';
   static const String childLearning = '/child/learning';
   static const String childQuiz = '/child/quiz';
+  static const String childMatchingGame = '/child/matching-game';
+  static const String childBubbleGame = '/child/bubble-game';
 
   // Parent & Educator Interface Routes
   static const String parentLogin = '/parent/login';

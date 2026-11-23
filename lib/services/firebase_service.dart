@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import '../firebase_options.dart';
+import 'openrouter_service.dart';
 
 /// Service responsible for initializing Firebase and executing connectivity tests.
 class FirebaseService {
@@ -183,11 +184,35 @@ class FirebaseService {
 
     final functionsRes = await testFunctions();
     results['functions'] = ServiceCheckResult(
-      serviceName: 'Cloud Functions & GenAI Proxy',
+      serviceName: 'Cloud Functions Infrastructure',
       success: functionsRes['status'] == 'success' ||
           functionsRes['fallbackReady'] == true,
       details: functionsRes['message'] as String,
     );
+
+    final aiRes = await testAdaptiveExerciseFunction();
+    results['ai_adaptive'] = ServiceCheckResult(
+      serviceName: 'AI Adaptive Engine & Gemini Proxy',
+      success: aiRes['status'] == 'success' ||
+          aiRes['fallbackReady'] == true,
+      details: aiRes['message'] as String,
+    );
+
+    final openRouter = OpenRouterService();
+    if (openRouter.hasApiKey) {
+      final orPing = await openRouter.testConnection();
+      results['openrouter'] = ServiceCheckResult(
+        serviceName: 'OpenRouter Free Model (${openRouter.model})',
+        success: orPing.isSuccess,
+        details: orPing.message,
+      );
+    } else {
+      results['openrouter'] = ServiceCheckResult(
+        serviceName: 'OpenRouter Free Model (${openRouter.model})',
+        success: true,
+        details: 'Configured with instant deterministic fallback bank & Cloud Functions proxy.',
+      );
+    }
 
     return results;
   }

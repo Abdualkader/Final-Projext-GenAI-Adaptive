@@ -2,6 +2,7 @@ import '../core/constants/firebase_collections.dart';
 import '../models/child_model.dart';
 import '../models/user_model.dart';
 import '../services/firestore_service.dart';
+import '../services/local_storage_service.dart';
 import '../services/sample_data_service.dart';
 
 /// Repository interface for user profiles and linked child profiles.
@@ -39,6 +40,7 @@ class BaseUserRepository implements UserRepository {
       if (doc != null && doc.exists && doc.data() != null) {
         final user = UserModel.fromMap(doc.data()!, id: doc.id);
         _inMemoryUsers[userId] = user;
+        await LocalStorageService.saveUser(user);
         return user;
       }
     } catch (_) {
@@ -47,6 +49,13 @@ class BaseUserRepository implements UserRepository {
 
     if (_inMemoryUsers.containsKey(userId)) {
       return _inMemoryUsers[userId];
+    }
+
+    // Check persistent local storage
+    final localUser = await LocalStorageService.getUserById(userId);
+    if (localUser != null) {
+      _inMemoryUsers[userId] = localUser;
+      return localUser;
     }
 
     // Return sample user for offline / test environments
@@ -58,6 +67,7 @@ class BaseUserRepository implements UserRepository {
   @override
   Future<void> saveUser(UserModel user) async {
     _inMemoryUsers[user.userId] = user;
+    await LocalStorageService.saveUser(user);
     try {
       await _firestoreService.setDocument(
         FirebaseCollections.users,
@@ -73,7 +83,9 @@ class BaseUserRepository implements UserRepository {
   Future<void> updatePreferredLanguage(String userId, String language) async {
     final user = await getUserById(userId);
     if (user != null) {
-      _inMemoryUsers[userId] = user.copyWith(preferredLanguage: language);
+      final updated = user.copyWith(preferredLanguage: language);
+      _inMemoryUsers[userId] = updated;
+      await LocalStorageService.saveUser(updated);
     }
     try {
       await _firestoreService.updateDocument(
@@ -97,6 +109,12 @@ class BaseUserRepository implements UserRepository {
 
   @override
   Future<List<ChildModel>> getLinkedChildren(String parentId) async {
+    // Sync any persistent children from local storage into memory
+    final persisted = await LocalStorageService.getAllChildren();
+    for (final c in persisted) {
+      _inMemoryChildren[c.childId] = c;
+    }
+
     try {
       final snapshot = await _firestoreService.queryCollection(
         FirebaseCollections.children,
@@ -105,15 +123,33 @@ class BaseUserRepository implements UserRepository {
       final list = snapshot.docs
           .map((doc) => ChildModel.fromMap(doc.data(), id: doc.id))
           .toList();
-      if (list.isNotEmpty) return list;
+      if (list.isNotEmpty) {
+        for (final c in list) {
+          _inMemoryChildren[c.childId] = c;
+          await LocalStorageService.saveChild(c);
+        }
+        return list;
+      }
     } catch (_) {
       // Fallback
     }
 
+    final user = await getUserById(parentId);
+    final linkedIds = user?.linkedChildIds ?? [];
+
     final localMatches = _inMemoryChildren.values
-        .where((c) => c.parentId == parentId)
+        .where((c) => c.parentId == parentId || linkedIds.contains(c.childId))
         .toList();
+
     if (localMatches.isNotEmpty) return localMatches;
+
+    // Check if there are any non-sample children saved
+    final allNonSample = _inMemoryChildren.values
+        .where((c) => !c.childId.startsWith('child_adam') && !c.childId.startsWith('child_sara') && !c.childId.startsWith('child_omar'))
+        .toList();
+    if (allNonSample.isNotEmpty && parentId != 'parent_default' && parentId != SampleDataService.sampleParentUser.userId) {
+      return allNonSample;
+    }
 
     return SampleDataService.sampleChildren
         .map((c) => c.copyWith(parentId: parentId))
@@ -132,20 +168,23 @@ class BaseUserRepository implements UserRepository {
 
   @override
   Future<void> addChildProfile(String parentId, ChildModel child) async {
-    _inMemoryChildren[child.childId] = child.copyWith(parentId: parentId);
+    final childWithParent = child.copyWith(parentId: parentId);
+    _inMemoryChildren[childWithParent.childId] = childWithParent;
+    await LocalStorageService.saveChild(childWithParent);
+
     try {
       await _firestoreService.setDocument(
         FirebaseCollections.children,
-        child.childId,
-        child.toMap(),
+        childWithParent.childId,
+        childWithParent.toMap(),
       );
     } catch (_) {
-      // Saved in-memory
+      // Saved in local storage & memory
     }
 
     final user = await getUserById(parentId);
-    if (user != null && !user.linkedChildIds.contains(child.childId)) {
-      final updatedChildIds = [...user.linkedChildIds, child.childId];
+    if (user != null && !user.linkedChildIds.contains(childWithParent.childId)) {
+      final updatedChildIds = [...user.linkedChildIds, childWithParent.childId];
       await saveUser(user.copyWith(linkedChildIds: updatedChildIds));
     }
   }
@@ -160,6 +199,7 @@ class BaseUserRepository implements UserRepository {
       if (doc != null && doc.exists && doc.data() != null) {
         final child = ChildModel.fromMap(doc.data()!, id: doc.id);
         _inMemoryChildren[childId] = child;
+        await LocalStorageService.saveChild(child);
         return child;
       }
     } catch (_) {
@@ -168,6 +208,12 @@ class BaseUserRepository implements UserRepository {
 
     if (_inMemoryChildren.containsKey(childId)) {
       return _inMemoryChildren[childId];
+    }
+
+    final localChild = await LocalStorageService.getChildById(childId);
+    if (localChild != null) {
+      _inMemoryChildren[childId] = localChild;
+      return localChild;
     }
 
     final match = SampleDataService.sampleChildren
@@ -188,6 +234,7 @@ class BaseUserRepository implements UserRepository {
     if (existing != null) {
       final updated = existing.copyWith(currentDifficultyLevel: clamped);
       _inMemoryChildren[childId] = updated;
+      await LocalStorageService.saveChild(updated);
     }
 
     try {
@@ -210,3 +257,4 @@ class BaseUserRepository implements UserRepository {
     }
   }
 }
+

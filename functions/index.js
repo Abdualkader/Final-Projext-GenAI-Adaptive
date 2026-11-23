@@ -275,9 +275,11 @@ exports.generateAdaptiveExercise = onCall(async (request) => {
     `[AI Adaptive Service] Request -> Category: ${categoryId}, Diff: ${difficultyLevel}, Lang: ${preferredLanguage}, Type: ${exerciseType}, Accuracy: ${recentAccuracy.toFixed(2)}`
   );
 
-  const apiKey = process.env.GENAI_API_KEY;
+  const openRouterKey = process.env.OPENROUTER_API_KEY;
+  const geminiKey = process.env.GENAI_API_KEY;
+  const defaultFreeModel = process.env.OPENROUTER_MODEL || "meta-llama/llama-3.3-70b-instruct";
 
-  if (apiKey) {
+  if (openRouterKey || geminiKey) {
     try {
       const allowedVocab = VOCABULARY_DOMAIN[categoryId] || [];
       const vocabListDescription = allowedVocab
@@ -308,65 +310,104 @@ Rules:
   ]
 }`;
 
-      // Call Google Generative AI (Gemini REST API) with 5-second timeout controller
+      let candidateText = null;
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-      const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
-      const response = await fetch(geminiEndpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal: controller.signal,
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: systemPrompt }] }],
-          generationConfig: {
-            temperature: 0.2, // Low temperature for high predictability (ASD friendly)
-            responseMimeType: "application/json"
-          }
-        })
-      });
+      if (openRouterKey) {
+        // Primary: OpenRouter API with Free Model
+        const openRouterResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${openRouterKey}`,
+            "HTTP-Referer": "https://asd-learning-assistant.edu",
+            "X-Title": "ASD Adaptive Learning Assistant"
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            model: defaultFreeModel,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: "Generate 1 exercise now. Output pure JSON only." }
+            ],
+            temperature: 0.2
+          })
+        });
 
-      clearTimeout(timeoutId);
+        clearTimeout(timeoutId);
 
-      if (response.ok) {
-        const jsonResponse = await response.json();
-        const candidateText =
-          jsonResponse.candidates?.[0]?.content?.parts?.[0]?.text;
-
-        if (candidateText) {
-          const parsed = JSON.parse(candidateText);
-
-          // Task 5: Rigorous response validation
-          if (validateAiExercise(parsed, categoryId, difficultyLevel)) {
-            const executionDurationMs = Date.now() - startTime;
-            console.log(
-              `[AI Adaptive Service] Generation SUCCESS via GenAI API in ${executionDurationMs}ms`
-            );
-
-            return {
-              id: `ai_${categoryId}_${Date.now()}`,
-              promptEn: parsed.promptEn,
-              promptAr: parsed.promptAr,
-              correctChoiceId: parsed.correctChoiceId,
-              choices: parsed.choices,
-              categoryId: categoryId,
-              difficultyLevel: difficultyLevel,
-              exerciseType: exerciseType,
-              source: "genai_live_api",
-              validated: true,
-              durationMs: executionDurationMs,
-              generatedAt: new Date().toISOString()
-            };
-          } else {
-            console.warn(
-              "[AI Adaptive Service] Validation failed for AI response, activating fallback bank."
-            );
-          }
+        if (openRouterResponse.ok) {
+          const resJson = await openRouterResponse.json();
+          candidateText = resJson.choices?.[0]?.message?.content;
+        } else {
+          console.warn(`[AI Adaptive Service] OpenRouter status ${openRouterResponse.status}, trying fallback.`);
         }
-      } else {
-        console.warn(
-          `[AI Adaptive Service] GenAI endpoint returned status ${response.status}, activating fallback bank.`
-        );
+      } else if (geminiKey) {
+        // Fallback: Gemini Direct REST API
+        const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`;
+        const response = await fetch(geminiEndpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: systemPrompt }] }],
+            generationConfig: {
+              temperature: 0.2,
+              responseMimeType: "application/json"
+            }
+          })
+        });
+
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          const jsonResponse = await response.json();
+          candidateText = jsonResponse.candidates?.[0]?.content?.parts?.[0]?.text;
+        }
+      }
+
+      if (candidateText) {
+        // Clean markdown backticks if present
+        let cleaned = candidateText.trim();
+        if (cleaned.startsWith("```json")) {
+          cleaned = cleaned.substring(7);
+        } else if (cleaned.startsWith("```")) {
+          cleaned = cleaned.substring(3);
+        }
+        if (cleaned.endsWith("```")) {
+          cleaned = cleaned.substring(0, cleaned.length - 3);
+        }
+
+        const parsed = JSON.parse(cleaned.trim());
+
+        // Task 5: Rigorous response validation
+        if (validateAiExercise(parsed, categoryId, difficultyLevel)) {
+          const executionDurationMs = Date.now() - startTime;
+          console.log(
+            `[AI Adaptive Service] Generation SUCCESS via AI in ${executionDurationMs}ms`
+          );
+
+          return {
+            id: `ai_${categoryId}_${Date.now()}`,
+            promptEn: parsed.promptEn,
+            promptAr: parsed.promptAr,
+            correctChoiceId: parsed.correctChoiceId,
+            choices: parsed.choices,
+            categoryId: categoryId,
+            difficultyLevel: difficultyLevel,
+            exerciseType: exerciseType,
+            source: openRouterKey ? "openrouter_free_model" : "genai_live_api",
+            model: openRouterKey ? defaultFreeModel : "gemini-1.5-flash",
+            validated: true,
+            durationMs: executionDurationMs,
+            generatedAt: new Date().toISOString()
+          };
+        } else {
+          console.warn(
+            "[AI Adaptive Service] Validation failed for AI response, activating fallback bank."
+          );
+        }
       }
     } catch (err) {
       // Task 15 & 16: Safe error handling and logging (no credentials in logs)
@@ -401,3 +442,47 @@ Rules:
     generatedAt: new Date().toISOString()
   };
 });
+
+// Specification alias matching PROJECT_REFERENCE.md Section 10
+exports.generateAdaptiveQuiz = exports.generateAdaptiveExercise;
+
+/**
+ * Callable Function for AI Adaptive Matching Game
+ * Returns a customized card set (pairs of images and words) adapted to child's level.
+ */
+exports.generateAdaptiveMatchingGame = onCall(async (request) => {
+  const data = request.data || {};
+  const categoryId = ["animals", "colors", "numbers", "letters"].includes(data.categoryId)
+    ? data.categoryId
+    : "animals";
+
+  let difficultyLevel = parseInt(data.difficultyLevel, 10);
+  if (isNaN(difficultyLevel) || difficultyLevel < 1) difficultyLevel = 1;
+  if (difficultyLevel > 3) difficultyLevel = 3;
+
+  // Level 1: 2 pairs (4 cards total)
+  // Level 2: 3 pairs (6 cards total)
+  // Level 3: 4 pairs (8 cards total)
+  const pairCount = difficultyLevel === 1 ? 2 : (difficultyLevel === 2 ? 3 : 4);
+  const allowedVocab = VOCABULARY_DOMAIN[categoryId] || VOCABULARY_DOMAIN.animals;
+
+  // Select items matching or below difficulty level
+  let eligible = allowedVocab.filter((v) => v.difficulty <= difficultyLevel);
+  if (eligible.length < pairCount) eligible = allowedVocab;
+
+  // Pick pairCount random items
+  const shuffled = [...eligible].sort(() => 0.5 - Math.random());
+  const selectedItems = shuffled.slice(0, pairCount);
+
+  return {
+    gameId: `game_${categoryId}_${Date.now()}`,
+    categoryId: categoryId,
+    difficultyLevel: difficultyLevel,
+    pairCount: pairCount,
+    items: selectedItems,
+    instructionsEn: "Match each picture with its word!",
+    instructionsAr: "طابق كل صورة مع كلمتها المناسبة!",
+    generatedAt: new Date().toISOString()
+  };
+});
+

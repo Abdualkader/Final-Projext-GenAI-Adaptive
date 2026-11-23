@@ -33,9 +33,6 @@ class ProgressDashboardScreen extends StatefulWidget {
 }
 
 class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
-  ProgressProvider? _progressProvider;
-  AuthProvider? _authProvider;
-
   @override
   void initState() {
     super.initState();
@@ -49,10 +46,11 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
     final auth = _resolveAuthProvider();
 
     if (provider != null) {
-      final targetChild = widget.childId ?? auth?.selectedChild?.childId ?? 'child_adam';
-      if (provider.uiState.isInitial || provider.activeChildId != targetChild) {
-        provider.loadProgress(targetChild, authProvider: auth);
-      }
+      final targetChild = widget.childId ??
+          auth?.selectedChild?.childId ??
+          auth?.currentUser?.linkedChildIds.firstOrNull ??
+          'child_adam';
+      provider.loadProgress(targetChild, authProvider: auth);
     }
   }
 
@@ -296,29 +294,16 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
         ],
       ),
       actions: [
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppDimensions.spaceM,
-            vertical: AppDimensions.spaceS,
-          ),
-          child: OutlinedButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Exporting student progress report...'),
-                ),
-              );
-            },
-            icon: const Icon(Icons.calendar_today_rounded, size: 16),
-            label: Text(l10n.text('export_data')),
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: AppColors.primaryBlue),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppDimensions.radiusM),
+        IconButton(
+          icon: const Icon(Icons.file_download_outlined, color: AppColors.primaryBlue),
+          tooltip: l10n.text('export_data'),
+          onPressed: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Exporting student progress report...'),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: AppDimensions.spaceM),
-            ),
-          ),
+            );
+          },
         ),
       ],
     );

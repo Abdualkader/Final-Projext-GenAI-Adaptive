@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/constants/app_routes.dart';
@@ -9,7 +10,6 @@ import '../../core/utils/responsive_layout.dart';
 import '../../models/learning_session_model.dart';
 import '../../models/quiz_question_model.dart';
 import '../../models/quiz_result_model.dart';
-import '../../providers/quiz_provider.dart';
 import '../../repositories/mock_data_repository.dart';
 import '../../repositories/quiz_repository.dart';
 import '../../repositories/session_repository.dart';
@@ -90,6 +90,8 @@ class _QuizScreenState extends State<QuizScreen> {
   Timer? _timer;
   int _remainingSeconds = 60;
   bool _isTimedOut = false;
+  bool _isLoadingAi = false;
+  late AiAdaptiveService _aiAdaptiveService;
 
   // Adaptive Learning State (Week 12 Task 7, 10, 11)
   AdaptiveEvaluationResult? _adaptiveResult;
@@ -102,18 +104,86 @@ class _QuizScreenState extends State<QuizScreen> {
     _quizRepository = widget.quizRepository ?? BaseQuizRepository();
     _sessionRepository = widget.sessionRepository ?? BaseSessionRepository();
     _audioService = widget.audioService ?? AudioService();
+    _aiAdaptiveService = widget.aiAdaptiveService ?? BaseAiAdaptiveService();
     _sessionId = 'quiz_session_${DateTime.now().millisecondsSinceEpoch}';
 
-    _initializeQuestions();
+    if (widget.useAi && (widget.questions == null || widget.questions!.isEmpty)) {
+      _isLoadingAi = true;
+      _loadAiQuestions();
+    } else {
+      _initializeQuestions();
+      if (widget.enableTimer) {
+        _startTimer();
+      }
+    }
+  }
 
-    if (widget.enableTimer) {
-      _startTimer();
+  Future<void> _loadAiQuestions() async {
+    try {
+      final aiList = await _aiAdaptiveService.generateAdaptiveQuizSession(
+        categoryId: _activeCategoryId,
+        difficultyLevel: widget.maxDifficulty ?? 1,
+        preferredLanguage: 'ar',
+        count: widget.questionCount,
+      );
+
+      if (mounted) {
+        setState(() {
+          _questions = aiList.isNotEmpty
+              ? aiList
+              : MockDataRepository.getQuizQuestionsForCategory(
+                  _activeCategoryId,
+                  count: widget.questionCount,
+                );
+          _currentIndex = 0;
+          _question = _questions[_currentIndex];
+          _questionStartTime = DateTime.now();
+          _remainingSeconds = widget.questionTimeoutDuration.inSeconds;
+          _isLoadingAi = false;
+        });
+
+        // Create session record in repository
+        _sessionRepository.createSession(
+          LearningSessionModel(
+            sessionId: _sessionId,
+            childId: _getEffectiveChildId(),
+            categoryId: _activeCategoryId,
+            startTime: DateTime.now(),
+            itemsPresented: _questions.map((q) => q.correctChoiceId).toList(),
+            score: 0.0,
+          ),
+        );
+
+        if (widget.enableTimer) {
+          _startTimer();
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        _initializeQuestions();
+        setState(() {
+          _isLoadingAi = false;
+        });
+        if (widget.enableTimer) {
+          _startTimer();
+        }
+      }
     }
   }
 
   void _initializeQuestions() {
-    if (widget.questions != null && widget.questions!.isNotEmpty) {
-      _questions = List.from(widget.questions!);
+    if (widget.questions != null &&
+        widget.questions!.isNotEmpty &&
+        (widget.questions!.first.categoryId == _activeCategoryId ||
+            _activeCategoryId == 'animals')) {
+      if (widget.shuffle) {
+        _questions = widget.questions!.map((q) {
+          final shuffled = List<QuizChoice>.from(q.choices)..shuffle();
+          return q.copyWith(choices: shuffled);
+        }).toList();
+      } else {
+        _questions = List.from(widget.questions!);
+      }
     } else {
       final defaultQuestion =
           MockDataRepository.getQuizQuestionForCategory(_activeCategoryId);
@@ -134,13 +204,26 @@ class _QuizScreenState extends State<QuizScreen> {
     _sessionRepository.createSession(
       LearningSessionModel(
         sessionId: _sessionId,
-        childId: widget.childId,
+        childId: _getEffectiveChildId(),
         categoryId: _activeCategoryId,
         startTime: DateTime.now(),
         itemsPresented: _questions.map((q) => q.correctChoiceId).toList(),
         score: 0.0,
       ),
     );
+  }
+
+  String _getEffectiveChildId() {
+    try {
+      final auth = Provider.of<AuthProvider?>(context, listen: false);
+      if (auth?.selectedChild != null && auth!.selectedChild!.childId.isNotEmpty) {
+        return auth.selectedChild!.childId;
+      }
+      if (auth?.currentUser != null && auth!.currentUser!.linkedChildIds.isNotEmpty) {
+        return auth.currentUser!.linkedChildIds.first;
+      }
+    } catch (_) {}
+    return widget.childId;
   }
 
   @override
@@ -150,7 +233,20 @@ class _QuizScreenState extends State<QuizScreen> {
     if (args is String && args != _activeCategoryId) {
       setState(() {
         _activeCategoryId = args;
-        _initializeQuestions();
+        final categoryQuestions =
+            MockDataRepository.getQuizQuestionsForCategory(_activeCategoryId);
+        if (widget.shuffle) {
+          _questions = categoryQuestions.map((q) {
+            final shuffled = List<QuizChoice>.from(q.choices)..shuffle();
+            return q.copyWith(choices: shuffled);
+          }).toList();
+        } else {
+          _questions = categoryQuestions;
+        }
+        _currentIndex = 0;
+        _question = _questions[_currentIndex];
+        _questionStartTime = DateTime.now();
+        _remainingSeconds = widget.questionTimeoutDuration.inSeconds;
         _selectedChoiceId = null;
         _isTimedOut = false;
         _isCompleted = false;
@@ -164,6 +260,15 @@ class _QuizScreenState extends State<QuizScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    if (!_isCompleted && _results.isNotEmpty) {
+      final correctCount = _results.where((r) => r.isCorrect).length;
+      final partialScore = _results.isEmpty ? 0.0 : (correctCount / _results.length);
+      _sessionRepository.completeSession(
+        _sessionId,
+        endTime: DateTime.now(),
+        score: partialScore,
+      );
+    }
     super.dispose();
   }
 
@@ -260,7 +365,7 @@ class _QuizScreenState extends State<QuizScreen> {
     final result = QuizResultModel(
       resultId: 'result_${DateTime.now().millisecondsSinceEpoch}',
       sessionId: _sessionId,
-      childId: widget.childId,
+      childId: _getEffectiveChildId(),
       questionId: _question.id,
       childResponse: choiceId,
       isCorrect: isCorrect,
@@ -281,7 +386,7 @@ class _QuizScreenState extends State<QuizScreen> {
     final result = QuizResultModel(
       resultId: 'timeout_${DateTime.now().millisecondsSinceEpoch}',
       sessionId: _sessionId,
-      childId: widget.childId,
+      childId: _getEffectiveChildId(),
       questionId: _question.id,
       childResponse: 'timeout',
       isCorrect: false,
@@ -331,12 +436,18 @@ class _QuizScreenState extends State<QuizScreen> {
       score: _questions.isEmpty ? 0.0 : (_score / _questions.length),
     );
 
+    final auth = Provider.of<AuthProvider?>(context, listen: false);
+    final effectiveChildId = (widget.childId == 'child_adam_001' && auth?.selectedChild != null)
+        ? auth!.selectedChild!.childId
+        : widget.childId;
+    final effectiveDifficulty = widget.maxDifficulty ?? auth?.selectedChild?.currentDifficultyLevel ?? 1;
+
     // Week 12: Trigger adaptive difficulty adjustment
     final adaptiveService = widget.adaptiveDifficultyService ?? const AdaptiveDifficultyService();
     final userRepo = widget.userRepository ?? BaseUserRepository();
     adaptiveService.updateChildDifficulty(
-      widget.childId,
-      currentDifficulty: widget.maxDifficulty ?? 1,
+      effectiveChildId,
+      currentDifficulty: effectiveDifficulty,
       recentResults: _results,
       userRepository: userRepo,
       activeCategoryId: _activeCategoryId,
@@ -345,6 +456,11 @@ class _QuizScreenState extends State<QuizScreen> {
         setState(() {
           _adaptiveResult = res;
         });
+        if (res.difficultyChanged && auth?.selectedChild != null) {
+          auth!.selectChild(auth.selectedChild!.copyWith(
+            currentDifficultyLevel: res.newDifficulty,
+          ));
+        }
       }
     });
   }
@@ -365,9 +481,35 @@ class _QuizScreenState extends State<QuizScreen> {
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+
+    if (_isLoadingAi) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(color: AppColors.primaryBlue),
+              const SizedBox(height: 16),
+              Text(
+                l10n.isArabic
+                    ? 'الذكاء الاصطناعي يجهز لك اختباراً ممتعاً... 🌟'
+                    : 'AI is preparing your fun quiz... 🌟',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     if (_isCompleted) {
       return _buildCompletionScreen(context, l10n);
@@ -565,13 +707,18 @@ class _QuizScreenState extends State<QuizScreen> {
                       backgroundColor: AppColors.primaryBlue,
                       iconColor: Colors.white,
                       onPressed: () {
+                        final prompt = _question.localizedPrompt(l10n.isArabic);
+                        _audioService.speakText(
+                          prompt,
+                          language: l10n.isArabic ? 'ar' : 'en',
+                        );
                         ScaffoldMessenger.of(context).hideCurrentSnackBar();
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             behavior: SnackBarBehavior.floating,
                             backgroundColor: AppColors.primaryBlue,
                             content: Text(
-                              '🔊 ${_question.localizedPrompt(l10n.isArabic)}',
+                              '🔊 $prompt',
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ),
@@ -612,6 +759,13 @@ class _QuizScreenState extends State<QuizScreen> {
                           isArabic: l10n.isArabic,
                           onTap: () {
                             _selectChoice(choice.id);
+                          },
+                          onListen: () {
+                            final label = choice.localizedLabel(l10n.isArabic);
+                            _audioService.speakText(
+                              label,
+                              language: l10n.isArabic ? 'ar' : 'en',
+                            );
                           },
                         ),
                       ),
@@ -742,7 +896,7 @@ class _QuizScreenState extends State<QuizScreen> {
                 ],
               ),
               const Spacer(),
-              // Celebratory Trophy / Big Star
+              // Celebratory Mascot / Big Star
               Container(
                 width: 130,
                 height: 130,
@@ -750,15 +904,30 @@ class _QuizScreenState extends State<QuizScreen> {
                   color: AppColors.starGold.withOpacity(0.18),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: AppColors.starGold.withOpacity(0.4),
-                    width: 3,
+                    color: AppColors.starGold.withOpacity(0.6),
+                    width: 3.5,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.starGold.withOpacity(0.25),
+                      blurRadius: 20,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
                 ),
-                child: const Center(
-                  child: Icon(
-                    Icons.military_tech_rounded,
-                    size: 80,
-                    color: AppColors.starGold,
+                child: ClipOval(
+                  child: Image.asset(
+                    'assets/images/quiz_star.jpg',
+                    width: 130,
+                    height: 130,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => const Center(
+                      child: Icon(
+                        Icons.military_tech_rounded,
+                        size: 80,
+                        color: AppColors.starGold,
+                      ),
+                    ),
                   ),
                 ),
               ),

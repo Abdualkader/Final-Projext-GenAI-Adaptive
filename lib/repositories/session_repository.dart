@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../core/constants/firebase_collections.dart';
 import '../models/learning_session_model.dart';
 import '../services/firestore_service.dart';
+import '../services/local_storage_service.dart';
 import '../services/sample_data_service.dart';
 
 /// Repository interface for learning session telemetry and analytics recording.
@@ -35,7 +36,7 @@ abstract class SessionRepository {
 /// Base implementation of [SessionRepository] communicating with Cloud Firestore.
 class BaseSessionRepository implements SessionRepository {
   final FirestoreService _firestoreService;
-  final List<LearningSessionModel> _inMemorySessions = [
+  static final List<LearningSessionModel> _inMemorySessions = [
     SampleDataService.sampleSession,
   ];
 
@@ -45,6 +46,7 @@ class BaseSessionRepository implements SessionRepository {
   @override
   Future<void> createSession(LearningSessionModel session) async {
     _inMemorySessions.add(session);
+    await LocalStorageService.saveSession(session);
     try {
       await _firestoreService.setDocument(
         FirebaseCollections.sessions,
@@ -67,6 +69,7 @@ class BaseSessionRepository implements SessionRepository {
     } else {
       _inMemorySessions.add(session);
     }
+    await LocalStorageService.saveSession(session);
 
     try {
       await _firestoreService.updateDocument(
@@ -87,10 +90,12 @@ class BaseSessionRepository implements SessionRepository {
   }) async {
     final index = _inMemorySessions.indexWhere((s) => s.sessionId == sessionId);
     if (index != -1) {
-      _inMemorySessions[index] = _inMemorySessions[index].copyWith(
+      final updated = _inMemorySessions[index].copyWith(
         endTime: endTime,
         score: score,
       );
+      _inMemorySessions[index] = updated;
+      await LocalStorageService.saveSession(updated);
     }
 
     try {
@@ -115,17 +120,19 @@ class BaseSessionRepository implements SessionRepository {
         sessionId,
       );
       if (doc != null && doc.exists && doc.data() != null) {
-        return LearningSessionModel.fromMap(doc.data()!, id: doc.id);
+        final session = LearningSessionModel.fromMap(doc.data()!, id: doc.id);
+        await LocalStorageService.saveSession(session);
+        return session;
       }
     } catch (_) {
       // Fallback
     }
 
-    try {
-      return _inMemorySessions.firstWhere((s) => s.sessionId == sessionId);
-    } catch (_) {
-      return null;
-    }
+    final mem = _inMemorySessions.where((s) => s.sessionId == sessionId).firstOrNull;
+    if (mem != null) return mem;
+
+    final all = await LocalStorageService.getAllSessions();
+    return all.where((s) => s.sessionId == sessionId).firstOrNull;
   }
 
   @override
@@ -142,17 +149,29 @@ class BaseSessionRepository implements SessionRepository {
         limit: limit,
       );
       if (snapshot.docs.isNotEmpty) {
-        return snapshot.docs
+        final list = snapshot.docs
             .map((doc) => LearningSessionModel.fromMap(doc.data(), id: doc.id))
             .toList();
+        for (final s in list) {
+          await LocalStorageService.saveSession(s);
+        }
+        return list;
       }
     } catch (_) {
       // Fallback
     }
 
-    return _inMemorySessions
-        .where((s) => s.childId == childId)
-        .toList()
-        ..sort((a, b) => b.startTime.compareTo(a.startTime));
+    final localSessions = await LocalStorageService.getSessionsForChild(childId);
+    final map = <String, LearningSessionModel>{};
+    for (final s in _inMemorySessions.where((s) => s.childId == childId)) {
+      map[s.sessionId] = s;
+    }
+    for (final s in localSessions) {
+      map[s.sessionId] = s;
+    }
+
+    final merged = map.values.toList()..sort((a, b) => b.startTime.compareTo(a.startTime));
+    return merged.take(limit).toList();
   }
 }
+

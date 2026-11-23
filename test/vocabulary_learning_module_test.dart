@@ -5,7 +5,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'package:asd_learning_assistant/core/constants/app_routes.dart';
 import 'package:asd_learning_assistant/core/localization/app_localizations.dart';
-import 'package:asd_learning_assistant/models/category_model.dart';
 import 'package:asd_learning_assistant/models/learning_session_model.dart';
 import 'package:asd_learning_assistant/models/vocabulary_item_model.dart';
 import 'package:asd_learning_assistant/providers/category_provider.dart';
@@ -16,7 +15,6 @@ import 'package:asd_learning_assistant/repositories/session_repository.dart';
 import 'package:asd_learning_assistant/repositories/vocabulary_repository.dart';
 import 'package:asd_learning_assistant/screens/child/vocabulary_learning_screen.dart';
 import 'package:asd_learning_assistant/services/audio_service.dart';
-import 'package:asd_learning_assistant/services/sample_data_service.dart';
 import 'package:asd_learning_assistant/widgets/vocabulary_card.dart';
 
 /// Test mock implementation of [SessionRepository] capturing session telemetry.
@@ -308,17 +306,17 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('1 / 5'), findsOneWidget);
+      expect(find.text('1 / 10'), findsOneWidget);
       expect(find.text('Next'), findsOneWidget);
 
       // Advance through all items
-      for (int i = 1; i <= 4; i++) {
+      for (int i = 1; i <= 9; i++) {
         await tester.tap(find.text('Next'));
         await tester.pumpAndSettle();
       }
 
-      // Final item reached (5 / 5)
-      expect(find.text('5 / 5'), findsOneWidget);
+      // Final item reached (10 / 10)
+      expect(find.text('10 / 10'), findsOneWidget);
       expect(find.text('Complete Session 🌟'), findsOneWidget);
 
       // Tap Complete Session
@@ -328,7 +326,7 @@ void main() {
       // Verify celebratory completion view with 3 stars and positive reinforcement (Task 10 & 11)
       expect(find.text('Session Complete! 🌟'), findsOneWidget);
       expect(find.text('You learned all words in this category!'), findsOneWidget);
-      expect(find.text('5 words learned!'), findsOneWidget);
+      expect(find.text('10 words learned!'), findsOneWidget);
       expect(find.byIcon(Icons.star_rounded), findsNWidgets(3));
 
       // Verify session was persisted in repository

@@ -29,13 +29,17 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _nameController = TextEditingController();
   String? _validationError;
   bool _isLoading = false;
+  bool _isSignUp = false;
+  String _selectedRole = 'parent';
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _nameController.dispose();
     super.dispose();
   }
 
@@ -104,11 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       } else {
         setState(() {
-          _validationError = provider.uiState.error?.toChildFriendlyMessage(l10n.isArabic) ??
-              provider.uiState.errorMessage ??
-              (l10n.isArabic
-                  ? 'بيانات الدخول غير صحيحة. يرجى المحاولة مرة أخرى.'
-                  : 'Invalid email or password. Please try again.');
+          _validationError = provider.uiState.getDisplayError(l10n.isArabic, isChildMode: false);
         });
       }
     } else {
@@ -126,6 +126,89 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
+      Navigator.pushReplacementNamed(
+        context,
+        AppRoutes.parentChildSelection,
+      );
+    }
+  }
+
+  Future<void> _handleSignUp(AppLocalizations l10n) async {
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (name.isEmpty) {
+      setState(() {
+        _validationError = l10n.text('name_required');
+      });
+      return;
+    }
+
+    if (email.isEmpty) {
+      setState(() {
+        _validationError = l10n.text('email_required');
+      });
+      return;
+    }
+
+    if (!email.contains('@') || !email.contains('.')) {
+      setState(() {
+        _validationError = l10n.text('invalid_email');
+      });
+      return;
+    }
+
+    if (password.isEmpty) {
+      setState(() {
+        _validationError = l10n.text('password_required');
+      });
+      return;
+    }
+
+    if (password.length < 6) {
+      setState(() {
+        _validationError = l10n.isArabic
+            ? 'يجب أن تتكون كلمة المرور من 6 أحرف على الأقل.'
+            : 'Password must be at least 6 characters.';
+      });
+      return;
+    }
+
+    setState(() {
+      _validationError = null;
+      _isLoading = true;
+    });
+
+    final provider = _resolveAuthProvider(context);
+    if (provider != null) {
+      final success = await provider.signUp(
+        email,
+        password,
+        role: _selectedRole,
+        displayName: name,
+        preferredLanguage: l10n.isArabic ? 'ar' : 'en',
+      );
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (success) {
+        Navigator.pushReplacementNamed(
+          context,
+          AppRoutes.parentChildSelection,
+        );
+      } else {
+        setState(() {
+          _validationError = provider.uiState.getDisplayError(l10n.isArabic, isChildMode: false);
+        });
+      }
+    } else {
+      setState(() {
+        _isLoading = false;
+      });
       Navigator.pushReplacementNamed(
         context,
         AppRoutes.parentChildSelection,
@@ -188,9 +271,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: AppColors.primaryContainer,
                         shape: BoxShape.circle,
                       ),
-                      child: const Center(
+                      child: Center(
                         child: Icon(
-                          Icons.supervisor_account_rounded,
+                          _isSignUp ? Icons.person_add_rounded : Icons.admin_panel_settings_rounded,
                           size: 36,
                           color: AppColors.primaryBlue,
                         ),
@@ -198,13 +281,98 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: AppDimensions.spaceM),
                     Text(
-                      l10n.text('parent_portal'),
+                      _isSignUp ? l10n.text('create_account_title') : l10n.text('parent_portal'),
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary,
                       ),
                       textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: AppDimensions.spaceM),
+
+                    // Mode Switcher Tabs
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusM),
+                        border: Border.all(color: AppColors.borderLight),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _isSignUp = false;
+                                  _validationError = null;
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(AppDimensions.radiusM),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: !_isSignUp ? Colors.white : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(AppDimensions.radiusM),
+                                  boxShadow: !_isSignUp
+                                      ? [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.05),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ]
+                                      : null,
+                                ),
+                                child: Text(
+                                  l10n.text('parent_login'),
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontWeight: !_isSignUp ? FontWeight.bold : FontWeight.w500,
+                                    color: !_isSignUp ? AppColors.primaryBlue : AppColors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _isSignUp = true;
+                                  _validationError = null;
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(AppDimensions.radiusM),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: _isSignUp ? Colors.white : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(AppDimensions.radiusM),
+                                  boxShadow: _isSignUp
+                                      ? [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.05),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ]
+                                      : null,
+                                ),
+                                child: Text(
+                                  l10n.text('create_account_title'),
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontWeight: _isSignUp ? FontWeight.bold : FontWeight.w500,
+                                    color: _isSignUp ? AppColors.primaryBlue : AppColors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: AppDimensions.spaceL),
 
@@ -241,6 +409,22 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: AppDimensions.spaceM),
                     ],
 
+                    // Sign-Up Specific: Name field
+                    if (_isSignUp) ...[
+                      TextField(
+                        controller: _nameController,
+                        decoration: InputDecoration(
+                          labelText: l10n.text('full_name'),
+                          hintText: l10n.isArabic ? 'سارة محمد' : 'Dr. Nora / Sarah',
+                          prefixIcon: const Icon(Icons.badge_outlined),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppDimensions.radiusM),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppDimensions.spaceM),
+                    ],
+
                     // Email Field
                     TextField(
                       controller: _emailController,
@@ -255,6 +439,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: AppDimensions.spaceM),
+
                     // Password Field
                     TextField(
                       controller: _passwordController,
@@ -267,16 +452,102 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
+
+                    // Quick-fill demo account button
+                    if (!_isSignUp) ...[
+                      const SizedBox(height: AppDimensions.spaceS),
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            _emailController.text = 'educator@example.com';
+                            _passwordController.text = 'password123';
+                            _validationError = null;
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusM),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppDimensions.spaceM,
+                            vertical: AppDimensions.spaceS,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryContainer.withOpacity(0.45),
+                            borderRadius: BorderRadius.circular(AppDimensions.radiusM),
+                            border: Border.all(
+                              color: AppColors.primaryBlue.withOpacity(0.25),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.auto_awesome_rounded,
+                                size: 16,
+                                color: AppColors.primaryBlue,
+                              ),
+                              const SizedBox(width: AppDimensions.spaceS),
+                              Expanded(
+                                child: Text(
+                                  l10n.isArabic
+                                      ? 'حساب تجريبي: educator@example.com (اضغط للملء)'
+                                      : 'Demo Account: educator@example.com (Tap to fill)',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primaryBlue,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    // Sign-Up Specific: Role selection
+                    if (_isSignUp) ...[
+                      const SizedBox(height: AppDimensions.spaceM),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ChoiceChip(
+                              label: Text(l10n.text('role_parent')),
+                              selected: _selectedRole == 'parent',
+                              onSelected: (selected) {
+                                if (selected) setState(() => _selectedRole = 'parent');
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: AppDimensions.spaceS),
+                          Expanded(
+                            child: ChoiceChip(
+                              label: Text(l10n.text('role_educator')),
+                              selected: _selectedRole == 'educator',
+                              onSelected: (selected) {
+                                if (selected) setState(() => _selectedRole = 'educator');
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+
                     const SizedBox(height: AppDimensions.spaceL),
-                    // Login Button
+
+                    // Submit Button (Login or Sign Up)
                     AppButton(
                       label: _isLoading
-                          ? (l10n.isArabic ? 'جاري الدخول...' : 'Signing in...')
-                          : l10n.text('login_btn'),
-                      onPressed: _isLoading ? null : () => _handleLogin(l10n),
+                          ? (l10n.isArabic ? 'جاري المعالجة...' : 'Processing...')
+                          : (_isSignUp ? l10n.text('signup_btn') : l10n.text('login_btn')),
+                      onPressed: _isLoading
+                          ? null
+                          : () => _isSignUp ? _handleSignUp(l10n) : _handleLogin(l10n),
                     ),
+
                     const SizedBox(height: AppDimensions.spaceM),
-                    // Child Guest Button
+                    const Divider(color: AppColors.borderLight),
+                    const SizedBox(height: AppDimensions.spaceS),
+
+                    // Quick Return to Child Mode
                     AppButton(
                       label: l10n.text('guest_child_btn'),
                       isOutlined: true,

@@ -1,15 +1,13 @@
 import 'dart:io';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:asd_learning_assistant/models/quiz_question_model.dart';
 import 'package:asd_learning_assistant/models/quiz_result_model.dart';
 import 'package:asd_learning_assistant/models/child_model.dart';
 import 'package:asd_learning_assistant/models/user_model.dart';
-import 'package:asd_learning_assistant/repositories/quiz_repository.dart';
-import 'package:asd_learning_assistant/repositories/session_repository.dart';
 import 'package:asd_learning_assistant/repositories/user_repository.dart';
 import 'package:asd_learning_assistant/services/adaptive_difficulty_service.dart';
 import 'package:asd_learning_assistant/services/ai_adaptive_service.dart';
+import 'package:asd_learning_assistant/models/matching_game_model.dart';
 import 'package:asd_learning_assistant/providers/quiz_provider.dart';
 
 /// Test mock implementation of [AiAdaptiveService] for hermetic, deterministic testing
@@ -57,7 +55,6 @@ class MockAiAdaptiveService implements AiAdaptiveService {
       );
     }
 
-    final isArabic = preferredLanguage == 'ar';
     return QuizQuestionModel(
       id: 'ai_${categoryId}_${DateTime.now().millisecondsSinceEpoch}',
       promptEn: 'Where is the Cat?',
@@ -107,6 +104,20 @@ class MockAiAdaptiveService implements AiAdaptiveService {
       list.add(q);
     }
     return list;
+  }
+
+  @override
+  Future<MatchingGameRound> generateMatchingGameRound({
+    required String categoryId,
+    required int difficultyLevel,
+    required String preferredLanguage,
+  }) async {
+    final baseService = BaseAiAdaptiveService();
+    return baseService.generateMatchingGameRound(
+      categoryId: categoryId,
+      difficultyLevel: difficultyLevel,
+      preferredLanguage: preferredLanguage,
+    );
   }
 
   @override

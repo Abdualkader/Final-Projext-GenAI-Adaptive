@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import '../core/constants/firebase_collections.dart';
 import '../models/child_model.dart';
-import '../models/learning_session_model.dart';
 import '../models/progress_model.dart';
-import '../models/quiz_result_model.dart';
-import '../models/vocabulary_item_model.dart';
 import '../services/firestore_service.dart';
+import '../services/local_storage_service.dart';
 import '../services/sample_data_service.dart';
 import 'mock_data_repository.dart';
 import 'quiz_repository.dart';
@@ -64,7 +62,7 @@ class BaseProgressRepository implements ProgressRepository {
   final UserRepository _userRepository;
   final VocabularyRepository _vocabularyRepository;
 
-  final List<ProgressRecordModel> _inMemoryRecords = [];
+  static final List<ProgressRecordModel> _inMemoryRecords = [];
 
   BaseProgressRepository({
     FirestoreService? firestoreService,
@@ -81,6 +79,7 @@ class BaseProgressRepository implements ProgressRepository {
   @override
   Future<void> createProgressRecord(ProgressRecordModel record) async {
     _inMemoryRecords.add(record);
+    await LocalStorageService.saveProgressRecord(record);
     try {
       await _firestoreService.setDocument(
         FirebaseCollections.progressRecords,
@@ -104,6 +103,7 @@ class BaseProgressRepository implements ProgressRepository {
     } else {
       _inMemoryRecords.add(record);
     }
+    await LocalStorageService.saveProgressRecord(record);
 
     try {
       await _firestoreService.updateDocument(
@@ -146,19 +146,31 @@ class BaseProgressRepository implements ProgressRepository {
         limit: limit,
       );
       if (snapshot.docs.isNotEmpty) {
-        return snapshot.docs
+        final list = snapshot.docs
             .map((doc) => ProgressRecordModel.fromMap(doc.data(), id: doc.id))
             .toList();
+        for (final p in list) {
+          await LocalStorageService.saveProgressRecord(p);
+        }
+        return list;
       }
     } catch (_) {
       // Fallback
     }
 
-    return _inMemoryRecords
-        .where((r) => r.childId == childId)
-        .toList()
-        ..sort((a, b) => b.date.compareTo(a.date));
+    final localRecords = await LocalStorageService.getProgressRecordsForChild(childId);
+    final map = <String, ProgressRecordModel>{};
+    for (final r in _inMemoryRecords.where((r) => r.childId == childId)) {
+      map[r.recordId] = r;
+    }
+    for (final r in localRecords) {
+      map[r.recordId] = r;
+    }
+
+    final merged = map.values.toList()..sort((a, b) => b.date.compareTo(a.date));
+    return merged.take(limit).toList();
   }
+
 
   @override
   Future<List<String>> getMasteredVocabulary(
@@ -280,23 +292,29 @@ class BaseProgressRepository implements ProgressRepository {
     String interestBadgeAr = 'يحب الحيوانات!';
 
     try {
-      final children = await _userRepository.getLinkedChildren('parent_default');
-      final matchedChild = children.firstWhere(
-        (c) => c.childId == childId,
-        orElse: () => SampleDataService.sampleChildren.firstWhere(
+      final directChild = await _userRepository.getChildById(childId);
+      if (directChild != null) {
+        studentName = directChild.name;
+        studentAge = directChild.ageYears ?? 5;
+      } else {
+        final children = await _userRepository.getLinkedChildren('parent_default');
+        final matchedChild = children.firstWhere(
           (c) => c.childId == childId,
-          orElse: () => ChildModel(
-            childId: childId,
-            parentId: 'parent_default',
-            name: childId == 'child_adam' ? 'Adam' : (childId.startsWith('child_') ? childId.substring(6) : childId),
-            currentDifficultyLevel: 1,
-            birthDate: DateTime.now().subtract(const Duration(days: 365 * 5)),
-            createdAt: DateTime.now(),
+          orElse: () => SampleDataService.sampleChildren.firstWhere(
+            (c) => c.childId == childId,
+            orElse: () => ChildModel(
+              childId: childId,
+              parentId: 'parent_default',
+              name: childId == 'child_adam' ? 'Adam' : (childId.startsWith('child_') ? childId.substring(6) : childId),
+              currentDifficultyLevel: 1,
+              birthDate: DateTime.now().subtract(const Duration(days: 365 * 5)),
+              createdAt: DateTime.now(),
+            ),
           ),
-        ),
-      );
-      studentName = matchedChild.name;
-      studentAge = matchedChild.ageYears ?? 5;
+        );
+        studentName = matchedChild.name;
+        studentAge = matchedChild.ageYears ?? 5;
+      }
     } catch (_) {}
 
     // 2. Fetch raw sessions and quiz results
@@ -330,20 +348,23 @@ class BaseProgressRepository implements ProgressRepository {
       start = now.subtract(const Duration(days: 30));
     }
 
+    final sDate = start;
+    final eDate = end;
+
     var filteredSessions = allSessions;
-    if (start != null) {
-      filteredSessions = filteredSessions.where((s) => s.startTime.isAfter(start!) || s.startTime.isAtSameMomentAs(start!)).toList();
+    if (sDate != null) {
+      filteredSessions = filteredSessions.where((s) => s.startTime.isAfter(sDate) || s.startTime.isAtSameMomentAs(sDate)).toList();
     }
-    if (end != null) {
-      filteredSessions = filteredSessions.where((s) => s.startTime.isBefore(end!) || s.startTime.isAtSameMomentAs(end!)).toList();
+    if (eDate != null) {
+      filteredSessions = filteredSessions.where((s) => s.startTime.isBefore(eDate) || s.startTime.isAtSameMomentAs(eDate)).toList();
     }
 
     var filteredQuizzes = allQuizzes;
-    if (start != null) {
-      filteredQuizzes = filteredQuizzes.where((q) => q.timestamp.isAfter(start!) || q.timestamp.isAtSameMomentAs(start!)).toList();
+    if (sDate != null) {
+      filteredQuizzes = filteredQuizzes.where((q) => q.timestamp.isAfter(sDate) || q.timestamp.isAtSameMomentAs(sDate)).toList();
     }
-    if (end != null) {
-      filteredQuizzes = filteredQuizzes.where((q) => q.timestamp.isBefore(end!) || q.timestamp.isAtSameMomentAs(end!)).toList();
+    if (eDate != null) {
+      filteredQuizzes = filteredQuizzes.where((q) => q.timestamp.isBefore(eDate) || q.timestamp.isAtSameMomentAs(eDate)).toList();
     }
 
     // 4. Apply Category Filtering (Task 9)

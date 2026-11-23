@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import '../core/errors/app_exceptions.dart';
 
 /// Clean abstraction service over Cloud Firestore database operations.
@@ -9,16 +10,43 @@ class FirestoreService {
   FirestoreService({FirebaseFirestore? firestore})
       : _customFirestore = firestore;
 
-  FirebaseFirestore get _firestore =>
-      _customFirestore ?? FirebaseFirestore.instance;
+  bool get _isFirebaseAvailable {
+    try {
+      return Firebase.apps.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  FirebaseFirestore? get _firestore {
+    final custom = _customFirestore;
+    if (custom != null) return custom;
+    if (!_isFirebaseAvailable) return null;
+    try {
+      return FirebaseFirestore.instance;
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// Retrieves a single document by ID from a given collection.
   Future<DocumentSnapshot<Map<String, dynamic>>?> getDocument(
     String collection,
     String docId,
   ) async {
+    final firestore = _firestore;
+    if (firestore == null) {
+      throw const NetworkException(
+        message: 'Firestore unavailable: Firebase not initialized.',
+      );
+    }
+
     try {
-      return await _firestore.collection(collection).doc(docId).get();
+      return await firestore
+          .collection(collection)
+          .doc(docId)
+          .get()
+          .timeout(const Duration(seconds: 4));
     } on FirebaseException catch (e) {
       _handleFirebaseException('$collection/$docId', e);
     } catch (e) {
@@ -36,11 +64,19 @@ class FirestoreService {
     Map<String, dynamic> data, {
     bool merge = true,
   }) async {
+    final firestore = _firestore;
+    if (firestore == null) {
+      throw const NetworkException(
+        message: 'Firestore unavailable: Firebase not initialized.',
+      );
+    }
+
     try {
-      await _firestore
+      await firestore
           .collection(collection)
           .doc(docId)
-          .set(data, SetOptions(merge: merge));
+          .set(data, SetOptions(merge: merge))
+          .timeout(const Duration(seconds: 4));
     } on FirebaseException catch (e) {
       _handleFirebaseException('$collection/$docId', e);
     } catch (e) {
@@ -56,8 +92,18 @@ class FirestoreService {
     String collection,
     Map<String, dynamic> data,
   ) async {
+    final firestore = _firestore;
+    if (firestore == null) {
+      throw const NetworkException(
+        message: 'Firestore unavailable: Firebase not initialized.',
+      );
+    }
+
     try {
-      return await _firestore.collection(collection).add(data);
+      return await firestore
+          .collection(collection)
+          .add(data)
+          .timeout(const Duration(seconds: 4));
     } on FirebaseException catch (e) {
       _handleFirebaseException(collection, e);
     } catch (e) {
@@ -74,8 +120,19 @@ class FirestoreService {
     String docId,
     Map<String, dynamic> data,
   ) async {
+    final firestore = _firestore;
+    if (firestore == null) {
+      throw const NetworkException(
+        message: 'Firestore unavailable: Firebase not initialized.',
+      );
+    }
+
     try {
-      await _firestore.collection(collection).doc(docId).update(data);
+      await firestore
+          .collection(collection)
+          .doc(docId)
+          .update(data)
+          .timeout(const Duration(seconds: 4));
     } on FirebaseException catch (e) {
       _handleFirebaseException('$collection/$docId', e);
     } catch (e) {
@@ -88,8 +145,19 @@ class FirestoreService {
 
   /// Deletes a document by ID.
   Future<void> deleteDocument(String collection, String docId) async {
+    final firestore = _firestore;
+    if (firestore == null) {
+      throw const NetworkException(
+        message: 'Firestore unavailable: Firebase not initialized.',
+      );
+    }
+
     try {
-      await _firestore.collection(collection).doc(docId).delete();
+      await firestore
+          .collection(collection)
+          .doc(docId)
+          .delete()
+          .timeout(const Duration(seconds: 4));
     } on FirebaseException catch (e) {
       _handleFirebaseException('$collection/$docId', e);
     } catch (e) {
@@ -107,15 +175,22 @@ class FirestoreService {
     bool descending = false,
     int? limit,
   }) async {
+    final firestore = _firestore;
+    if (firestore == null) {
+      throw const NetworkException(
+        message: 'Firestore unavailable: Firebase not initialized.',
+      );
+    }
+
     try {
-      Query<Map<String, dynamic>> query = _firestore.collection(collection);
+      Query<Map<String, dynamic>> query = firestore.collection(collection);
       if (orderByField != null) {
         query = query.orderBy(orderByField, descending: descending);
       }
       if (limit != null) {
         query = query.limit(limit);
       }
-      return await query.get();
+      return await query.get().timeout(const Duration(seconds: 4));
     } on FirebaseException catch (e) {
       _handleFirebaseException(collection, e);
     } catch (e) {
@@ -136,8 +211,15 @@ class FirestoreService {
     bool descending = false,
     int? limit,
   }) async {
+    final firestore = _firestore;
+    if (firestore == null) {
+      throw const NetworkException(
+        message: 'Firestore unavailable: Firebase not initialized.',
+      );
+    }
+
     try {
-      Query<Map<String, dynamic>> query = _firestore.collection(collection);
+      Query<Map<String, dynamic>> query = firestore.collection(collection);
 
       if (whereEquals != null) {
         whereEquals.forEach((field, value) {
@@ -161,7 +243,7 @@ class FirestoreService {
         query = query.limit(limit);
       }
 
-      return await query.get();
+      return await query.get().timeout(const Duration(seconds: 4));
     } on FirebaseException catch (e) {
       _handleFirebaseException(collection, e);
     } catch (e) {
@@ -178,7 +260,11 @@ class FirestoreService {
     String? orderByField,
     bool descending = false,
   }) {
-    Query<Map<String, dynamic>> query = _firestore.collection(collection);
+    final firestore = _firestore;
+    if (firestore == null) {
+      return const Stream.empty();
+    }
+    Query<Map<String, dynamic>> query = firestore.collection(collection);
     if (orderByField != null) {
       query = query.orderBy(orderByField, descending: descending);
     }

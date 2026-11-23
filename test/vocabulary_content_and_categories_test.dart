@@ -5,11 +5,8 @@ import 'package:provider/provider.dart';
 
 import 'package:asd_learning_assistant/core/constants/app_colors.dart';
 import 'package:asd_learning_assistant/core/constants/app_routes.dart';
-import 'package:asd_learning_assistant/core/errors/app_exceptions.dart';
-import 'package:asd_learning_assistant/core/errors/ui_state.dart';
 import 'package:asd_learning_assistant/core/localization/app_localizations.dart';
 import 'package:asd_learning_assistant/core/utils/content_validator.dart';
-import 'package:asd_learning_assistant/core/utils/ui_helpers.dart';
 import 'package:asd_learning_assistant/models/category_model.dart';
 import 'package:asd_learning_assistant/models/vocabulary_item_model.dart';
 import 'package:asd_learning_assistant/providers/category_provider.dart';
@@ -18,12 +15,8 @@ import 'package:asd_learning_assistant/repositories/category_repository.dart';
 import 'package:asd_learning_assistant/repositories/vocabulary_repository.dart';
 import 'package:asd_learning_assistant/screens/child/category_selection_screen.dart';
 import 'package:asd_learning_assistant/screens/child/vocabulary_learning_screen.dart';
-import 'package:asd_learning_assistant/services/audio_service.dart';
 import 'package:asd_learning_assistant/services/sample_data_service.dart';
 import 'package:asd_learning_assistant/services/storage_service.dart';
-import 'package:asd_learning_assistant/widgets/app_error_widget.dart';
-import 'package:asd_learning_assistant/widgets/empty_state_widget.dart';
-import 'package:asd_learning_assistant/widgets/loading_widget.dart';
 import 'package:asd_learning_assistant/widgets/vocabulary_card.dart';
 
 /// Test wrapper providing MaterialApp, localizations, and optional providers.
@@ -451,9 +444,6 @@ void main() {
       expect(find.text('Letter A'), findsOneWidget);
       expect(find.text('أَلِف'), findsOneWidget);
 
-      // Check difficulty level
-      expect(find.text('Level 1: Easy'), findsOneWidget);
-
       // Check audio buttons
       expect(find.text('🔊  Play Audio'), findsOneWidget);
 
@@ -492,7 +482,6 @@ void main() {
       expect(find.text('Numbers'), findsWidgets);
       expect(find.text('One'), findsOneWidget);
       expect(find.text('وَاحِد'), findsOneWidget);
-      expect(find.text('Level 1: Easy'), findsOneWidget);
 
       // Advance to Two
       await tester.tap(find.text('Next'));
@@ -522,7 +511,6 @@ void main() {
       expect(find.text('Colours'), findsWidgets);
       expect(find.text('Red'), findsOneWidget);
       expect(find.text('أَحْمَر'), findsOneWidget);
-      expect(find.text('Level 1: Easy'), findsOneWidget);
 
       // Advance to Blue
       await tester.tap(find.text('Next'));
@@ -552,7 +540,6 @@ void main() {
       expect(find.text('Animals'), findsWidgets);
       expect(find.text('Cat'), findsOneWidget);
       expect(find.text('قِطَّة'), findsOneWidget);
-      expect(find.text('Level 1: Easy'), findsOneWidget);
 
       // Advance to Dog
       await tester.tap(find.text('Next'));

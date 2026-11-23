@@ -6,14 +6,10 @@ import 'package:provider/provider.dart';
 import 'package:asd_learning_assistant/core/localization/app_localizations.dart';
 import 'package:asd_learning_assistant/models/quiz_question_model.dart';
 import 'package:asd_learning_assistant/models/quiz_result_model.dart';
-import 'package:asd_learning_assistant/models/vocabulary_item_model.dart';
 import 'package:asd_learning_assistant/providers/quiz_provider.dart';
 import 'package:asd_learning_assistant/repositories/quiz_repository.dart';
 import 'package:asd_learning_assistant/repositories/session_repository.dart';
-import 'package:asd_learning_assistant/repositories/vocabulary_repository.dart';
 import 'package:asd_learning_assistant/screens/child/quiz_screen.dart';
-import 'package:asd_learning_assistant/services/audio_service.dart';
-import 'package:asd_learning_assistant/widgets/feedback_banner.dart';
 import 'package:asd_learning_assistant/widgets/quiz_choice_card.dart';
 
 Widget _buildTestApp({

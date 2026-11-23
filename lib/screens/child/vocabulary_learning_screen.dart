@@ -56,6 +56,8 @@ class _VocabularyLearningScreenState extends State<VocabularyLearningScreen> {
   DateTime? _lastAudioTapTime;
   bool _sessionStarted = false;
 
+  LearningSessionProvider? _sessionProvider;
+
   @override
   void initState() {
     super.initState();
@@ -72,6 +74,10 @@ class _VocabularyLearningScreenState extends State<VocabularyLearningScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    try {
+      _sessionProvider = Provider.of<LearningSessionProvider?>(context, listen: false);
+    } catch (_) {}
+
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args is String && args != _activeCategoryId) {
       setState(() {
@@ -103,8 +109,22 @@ class _VocabularyLearningScreenState extends State<VocabularyLearningScreen> {
   }
 
   @override
+  void deactivate() {
+    _inactivityTimer?.cancel();
+    super.deactivate();
+  }
+
+  @override
   void dispose() {
     _inactivityTimer?.cancel();
+    if (_sessionStarted && !_isCompleted) {
+      if (_sessionProvider != null) {
+        final total = _items.isEmpty ? 1 : _items.length;
+        final viewed = (_currentIndex + 1).clamp(1, total);
+        final score = (viewed / total).clamp(0.2, 1.0);
+        _sessionProvider?.endSession(score: score);
+      }
+    }
     super.dispose();
   }
 
@@ -112,6 +132,10 @@ class _VocabularyLearningScreenState extends State<VocabularyLearningScreen> {
   void _loadVocabularyAndStartSession() {
     final vocabProvider =
         Provider.of<VocabularyProvider?>(context, listen: false);
+    final authProvider =
+        Provider.of<AuthProvider?>(context, listen: false);
+    final maxDiff = authProvider?.selectedChild?.currentDifficultyLevel;
+
     if (vocabProvider != null) {
       vocabProvider.loadVocabulary(_activeCategoryId).then((_) {
         if (!mounted) return;
@@ -128,8 +152,6 @@ class _VocabularyLearningScreenState extends State<VocabularyLearningScreen> {
       _sessionStarted = true;
       final sessionProvider =
           Provider.of<LearningSessionProvider?>(context, listen: false);
-      final authProvider =
-          Provider.of<AuthProvider?>(context, listen: false);
 
       final childId = authProvider?.selectedChild?.childId ??
           authProvider?.currentUser?.linkedChildIds.firstOrNull ??
@@ -235,6 +257,14 @@ class _VocabularyLearningScreenState extends State<VocabularyLearningScreen> {
 
     if (vocabProvider != null) {
       await vocabProvider.playAudioFor(item, isArabic: isArabic);
+    } else {
+      final rawPath = isArabic ? item.audioUrlAr : item.audioUrlEn;
+      final word = isArabic ? item.wordAr : item.wordEn;
+      await AudioService().playVocabularyAudio(
+        rawPath,
+        wordText: word,
+        language: isArabic ? 'ar' : 'en',
+      );
     }
   }
 
@@ -312,8 +342,6 @@ class _VocabularyLearningScreenState extends State<VocabularyLearningScreen> {
         Provider.of<VocabularyProvider?>(context, listen: true);
     final catProvider =
         Provider.of<CategoryProvider?>(context, listen: false);
-    final sessionProvider =
-        Provider.of<LearningSessionProvider?>(context, listen: false);
 
     final activeItems = _getActiveItems(vocabProvider);
 
@@ -349,7 +377,11 @@ class _VocabularyLearningScreenState extends State<VocabularyLearningScreen> {
           child: AppErrorWidget(
             message: vocabProvider.uiState
                 .getDisplayError(l10n.isArabic, isChildMode: true),
-            onRetry: () => vocabProvider.loadVocabulary(_activeCategoryId),
+            onRetry: () {
+              final auth = Provider.of<AuthProvider?>(context, listen: false);
+              final maxDiff = auth?.selectedChild?.currentDifficultyLevel;
+              vocabProvider.loadVocabulary(_activeCategoryId, maxDifficulty: maxDiff);
+            },
             isChildMode: true,
           ),
         ),
@@ -734,6 +766,24 @@ class _VocabularyLearningScreenState extends State<VocabularyLearningScreen> {
                           context,
                           AppRoutes.childQuiz,
                           arguments: _activeCategoryId,
+                        );
+                      },
+                    ),
+                    const SizedBox(height: AppDimensions.spaceM),
+
+                    // Matching Game Action Button
+                    AppButton(
+                      label: l10n.isArabic ? 'لعبة المطابقة 🧩' : 'Match Cards Game 🧩',
+                      icon: Icons.extension_rounded,
+                      height: 50,
+                      backgroundColor: AppColors.primaryBlue,
+                      onPressed: () {
+                        Navigator.pushReplacementNamed(
+                          context,
+                          AppRoutes.childMatchingGame,
+                          arguments: {
+                            'categoryId': _activeCategoryId,
+                          },
                         );
                       },
                     ),

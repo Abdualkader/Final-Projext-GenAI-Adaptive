@@ -2,15 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asd_learning_assistant/core/constants/app_colors.dart';
-import 'package:asd_learning_assistant/core/errors/app_exceptions.dart';
 import 'package:asd_learning_assistant/core/localization/app_localizations.dart';
 import 'package:asd_learning_assistant/models/child_model.dart';
 import 'package:asd_learning_assistant/models/learning_session_model.dart';
 import 'package:asd_learning_assistant/models/progress_model.dart';
 import 'package:asd_learning_assistant/models/quiz_result_model.dart';
 import 'package:asd_learning_assistant/models/user_model.dart';
-import 'package:asd_learning_assistant/models/vocabulary_item_model.dart';
 import 'package:asd_learning_assistant/providers/auth_provider.dart';
 import 'package:asd_learning_assistant/providers/progress_provider.dart';
 import 'package:asd_learning_assistant/repositories/progress_repository.dart';
@@ -340,7 +337,6 @@ void main() {
     });
 
     test('TASK 12 — Security Authorization Gate: rejects unauthorized child queries', () async {
-      final authProvider = AuthProvider(userRepository: userRepo);
       final parentUser = UserModel(
         userId: 'parent_1',
         email: 'parent@test.com',
@@ -358,11 +354,6 @@ void main() {
       expect(progressProvider.uiState.isSuccess, true);
 
       // child_stranger is NOT linked to parent_1
-      // We test security validation by mocking currentUser
-      final authorizedParent = AuthProvider(userRepository: userRepo);
-      // Manually set user state by loading
-      await userRepo.saveUser(parentUser);
-
       // Calling loadProgress with an unauthorized child ID:
       // When authProvider has linkedChildIds without 'child_unauthorized':
       final restrictedProvider = ProgressProvider(progressRepository: progressRepo);

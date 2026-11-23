@@ -35,7 +35,7 @@ void main() {
     await tester.pumpWidget(const ASDLearningApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('Hello, Adam! 👋'), findsOneWidget);
+    expect(find.text('Hello! 👋'), findsOneWidget);
     expect(find.text('What would you like to learn today?'), findsOneWidget);
 
     // Week 4 Task 2 four categories: Letters, Numbers, Colors, Animals
@@ -68,7 +68,7 @@ void main() {
     await tester.tap(languageButton);
     await tester.pumpAndSettle();
 
-    expect(find.text('أهلاً يا آدم! 👋'), findsOneWidget);
+    expect(find.text('أهلاً! 👋'), findsOneWidget);
     expect(find.text('الحروف'), findsOneWidget);
     expect(find.text('الأرقام'), findsOneWidget);
     expect(find.text('الألوان'), findsOneWidget);
@@ -79,7 +79,7 @@ void main() {
     await tester.tap(languageButton);
     await tester.pumpAndSettle();
 
-    expect(find.text('Hello, Adam! 👋'), findsOneWidget);
+    expect(find.text('Hello! 👋'), findsOneWidget);
     expect(find.text('Animals'), findsOneWidget);
   });
 
@@ -97,7 +97,7 @@ void main() {
     expect(find.text('Cat'), findsOneWidget);
     expect(find.text('قِطَّة'), findsOneWidget);
     expect(find.text('Animals'), findsOneWidget);
-    expect(find.text('1 / 3'), findsOneWidget);
+    expect(find.text('1 / 8'), findsOneWidget);
 
     // Audio Play Button (Task 4)
     final audioBtn = find.text('🔊  Play Audio');
@@ -111,10 +111,10 @@ void main() {
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
-    // Advance to 2 / 3: Dog
+    // Advance to 2 / 8: Dog
     expect(find.text('Dog'), findsOneWidget);
     expect(find.text('كَلْب'), findsOneWidget);
-    expect(find.text('2 / 3'), findsOneWidget);
+    expect(find.text('2 / 8'), findsOneWidget);
   });
 
   testWidgets('Test 4: Interactive Quiz Screen handles Positive Reinforcement (Task 10)',
@@ -266,7 +266,7 @@ void main() {
     await tester.tap(find.byTooltip('Language / اللغة'));
     await tester.pumpAndSettle();
 
-    expect(find.text('أهلاً يا آدم! 👋'), findsOneWidget);
+    expect(find.text('أهلاً! 👋'), findsOneWidget);
     expect(find.text('الحروف'), findsOneWidget);
     expect(find.text('الأرقام'), findsOneWidget);
     expect(find.text('الألوان'), findsOneWidget);

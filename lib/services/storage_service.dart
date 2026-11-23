@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../core/errors/app_exceptions.dart';
 
@@ -9,6 +10,14 @@ class StorageService {
   final FirebaseStorage? _customStorage;
 
   StorageService({FirebaseStorage? storage}) : _customStorage = storage;
+
+  bool get _isFirebaseAvailable {
+    try {
+      return Firebase.apps.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
 
   FirebaseStorage get _storage => _customStorage ?? FirebaseStorage.instance;
 
@@ -25,9 +34,15 @@ class StorageService {
     }
 
     try {
+      if (_customStorage == null && !_isFirebaseAvailable) {
+        return path;
+      }
       final cleanPath = path.startsWith('/') ? path.substring(1) : path;
       final ref = _storage.ref(cleanPath);
-      return await ref.getDownloadURL();
+      return await ref.getDownloadURL().timeout(
+        const Duration(milliseconds: 500),
+        onTimeout: () => path,
+      );
     } catch (e) {
       // In offline / test environment or missing storage, return original path safely
       return path;

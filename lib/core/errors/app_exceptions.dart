@@ -46,6 +46,13 @@ class NetworkException extends AppException {
     }
     return 'The connection is resting, let’s try again in a moment! ☁️';
   }
+  @override
+  String toParentMessage(bool isArabic) {
+    if (isArabic) {
+      return 'تعذر الاتصال بالخدمة. يرجى التحقق من اتصال الإنترنت.';
+    }
+    return message;
+  }
 }
 
 /// Thrown when authentication or permission verification fails.
@@ -55,6 +62,33 @@ class AuthException extends AppException {
     super.code = 'AUTH_ERROR',
     super.originalError,
   });
+
+  @override
+  String toParentMessage(bool isArabic) {
+    if (!isArabic) return message;
+    switch (code) {
+      case 'user-not-found':
+      case 'wrong-password':
+      case 'invalid-credential':
+        return 'البريد الإلكتروني أو كلمة المرور غير صحيحة. يرجى المحاولة مجدداً.';
+      case 'email-already-in-use':
+        return 'يوجد حساب مسجل بهذا البريد الإلكتروني بالفعل.';
+      case 'invalid-email':
+        return 'صيغة البريد الإلكتروني غير صالحة.';
+      case 'weak-password':
+        return 'كلمة المرور ضعيفة. يرجى استخدام 6 أحرف على الأقل.';
+      case 'user-disabled':
+        return 'تم تعطيل هذا الحساب. يرجى التواصل مع الدعم.';
+      case 'network-request-failed':
+        return 'خطأ في الاتصال بالشبكة. يرجى التحقق من اتصال الإنترنت.';
+      case 'too-many-requests':
+        return 'محاولات دخول كثيرة خاطئة. يرجى المحاولة لاحقاً.';
+      case 'configuration-not-found':
+        return 'خدمة المصادقة Firebase غير مفعلة في لوحة التحكم.';
+      default:
+        return message;
+    }
+  }
 }
 
 /// Thrown when a requested resource (vocabulary, child profile, category) is not found.

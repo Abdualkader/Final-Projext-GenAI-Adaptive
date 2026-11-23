@@ -5,18 +5,33 @@ import '../core/localization/app_localizations.dart';
 
 /// Top header matching Wireframe 1: child avatar, personalized greeting, and settings button.
 class AppHeader extends StatelessWidget {
-  final String childName;
+  final String? childName;
   final VoidCallback onSettingsTap;
   final VoidCallback? onAvatarTap;
   final Widget? trailing;
 
   const AppHeader({
     super.key,
-    this.childName = 'Adam',
+    this.childName,
     required this.onSettingsTap,
     this.onAvatarTap,
     this.trailing,
   });
+
+  String _formatGreeting(AppLocalizations l10n, String? name) {
+    final cleanName = name?.trim();
+    final hasValidName = cleanName != null &&
+        cleanName.isNotEmpty &&
+        cleanName.toLowerCase() != 'adam' &&
+        cleanName != 'طفل' &&
+        cleanName != 'زائر' &&
+        cleanName.toLowerCase() != 'guest';
+
+    if (hasValidName) {
+      return l10n.isArabic ? 'أهلاً يا $cleanName! 👋' : 'Hello, $cleanName! 👋';
+    }
+    return l10n.isArabic ? 'أهلاً! 👋' : 'Hello! 👋';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +87,7 @@ class AppHeader extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  l10n.text('greeting_child'),
+                  _formatGreeting(l10n, childName),
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,

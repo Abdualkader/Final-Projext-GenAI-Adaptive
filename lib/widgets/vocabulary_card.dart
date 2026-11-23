@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/constants/app_colors.dart';
 import '../core/constants/app_dimensions.dart';
 import '../models/vocabulary_item_model.dart';
+import '../repositories/mock_data_repository.dart';
 import '../services/storage_service.dart';
 import 'app_button.dart';
 import 'large_icon_button.dart';
@@ -80,7 +81,7 @@ class VocabularyCard extends StatelessWidget {
               borderRadius: AppDimensions.largeCardBorderRadius,
               child: Column(
                 children: [
-                  // Top info strip with difficulty level
+                  // Top info strip (Clean sensory layout without arbitrary difficulty levels)
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppDimensions.spaceM,
@@ -90,7 +91,24 @@ class VocabularyCard extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildDifficultyPill(item.difficultyLevel),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.school_rounded,
+                              size: 16,
+                              color: AppColors.primaryBlue,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              isArabic ? 'بطاقة تعلّم' : 'Learning Card',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryBlue,
+                              ),
+                            ),
+                          ],
+                        ),
                         if (item.transliteration.isNotEmpty)
                           Text(
                             item.transliteration,
@@ -253,85 +271,61 @@ class VocabularyCard extends StatelessWidget {
     );
   }
 
-  /// Builds a calm difficulty badge (Task 4)
+  /// Level pill removed per pedagogical review (levels are not based on scientific ASD studies)
   Widget _buildDifficultyPill(int level) {
-    Color bg;
-    Color fg;
-    String labelEn;
-    String labelAr;
-
-    switch (level) {
-      case 1:
-        bg = AppColors.successLight;
-        fg = AppColors.success;
-        labelEn = 'Level 1: Easy';
-        labelAr = 'المستوى ١: سهل 🌱';
-        break;
-      case 2:
-        bg = const Color(0xFFFFF7ED);
-        fg = const Color(0xFFEA580C);
-        labelEn = 'Level 2: Medium';
-        labelAr = 'المستوى ٢: متوسط 🌿';
-        break;
-      case 3:
-      default:
-        bg = const Color(0xFFFDF2F8);
-        fg = const Color(0xFFBE185D);
-        labelEn = 'Level 3: Hard';
-        labelAr = 'المستوى ٣: متقدم 🌳';
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-        border: Border.all(color: fg.withOpacity(0.3)),
-      ),
-      child: Text(
-        isArabic ? labelAr : labelEn,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: fg,
-        ),
-      ),
-    );
+    return const SizedBox.shrink();
   }
 
   /// Image resolver supporting network URLs, local asset paths,
   /// Firebase Storage paths, and friendly fallback illustrations (Task 5).
   Widget _buildImageArea(BuildContext context, VocabularyItemModel item) {
-    final rawUrl = item.imageUrl.trim();
+    String rawUrl = item.imageUrl.trim();
 
-    if (rawUrl.isEmpty) {
+    // If imageUrl is a mock Firestore path or empty, resolve real local asset
+    if (rawUrl.isEmpty || rawUrl.startsWith('vocabulary/')) {
+      final repoAsset = MockDataRepository.getImagePathForId(item.id);
+      if (repoAsset.isNotEmpty) {
+        rawUrl = repoAsset;
+      }
+    }
+
+    if (rawUrl.isEmpty || rawUrl.startsWith('invalid://')) {
       return _buildVocabularyIllustration(item);
     }
 
     // Direct HTTP/HTTPS Network URL
     if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
-      return Image.network(
-        rawUrl,
-        fit: BoxFit.contain,
-        loadingBuilder: (context, child, progress) {
-          if (progress == null) return child;
-          return const LoadingWidget(isCompact: true);
-        },
-        errorBuilder: (context, error, stackTrace) {
-          return _buildVocabularyIllustration(item);
-        },
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(AppDimensions.radiusL),
+        child: Image.network(
+          rawUrl,
+          width: double.infinity,
+          height: double.infinity,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, progress) {
+            if (progress == null) return child;
+            return const LoadingWidget(isCompact: true);
+          },
+          errorBuilder: (context, error, stackTrace) {
+            return _buildVocabularyIllustration(item);
+          },
+        ),
       );
     }
 
-    // Local Asset Image
+    // Local Asset Image (registered in pubspec.yaml)
     if (rawUrl.startsWith('assets/')) {
-      return Image.asset(
-        rawUrl,
-        fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) {
-          return _buildVocabularyIllustration(item);
-        },
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(AppDimensions.radiusL),
+        child: Image.asset(
+          rawUrl,
+          width: double.infinity,
+          height: double.infinity,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return _buildVocabularyIllustration(item);
+          },
+        ),
       );
     }
 
@@ -458,35 +452,80 @@ class VocabularyCard extends StatelessWidget {
         iconColor = const Color(0xFF059669);
         label = '5️⃣ Five / خمسة';
         break;
-
-      // Letters
-      case 'alif':
-        icon = Icons.text_fields_rounded;
-        iconColor = const Color(0xFF8E24AA);
-        label = '🔤 Letter A / أَلِف';
+      case 'six':
+        icon = Icons.looks_6_rounded;
+        iconColor = const Color(0xFFEC4899);
+        label = '6️⃣ Six / ستة';
         break;
-      case 'baa':
-        icon = Icons.text_fields_rounded;
-        iconColor = const Color(0xFF8E24AA);
-        label = '🔤 Letter B / بَاء';
+      case 'seven':
+        icon = Icons.filter_7_rounded;
+        iconColor = const Color(0xFF8B5CF6);
+        label = '7️⃣ Seven / سبعة';
         break;
-      case 'taa':
-        icon = Icons.text_fields_rounded;
-        iconColor = const Color(0xFF8E24AA);
-        label = '🔤 Letter T / تَاء';
+      case 'eight':
+        icon = Icons.filter_8_rounded;
+        iconColor = const Color(0xFF0EA5E9);
+        label = '8️⃣ Eight / ثمانية';
         break;
-      case 'thaa':
-        icon = Icons.text_fields_rounded;
-        iconColor = const Color(0xFF8E24AA);
-        label = '🔤 Letter Th / ثَاء';
+      case 'nine':
+        icon = Icons.filter_9_rounded;
+        iconColor = const Color(0xFFF97316);
+        label = '9️⃣ Nine / تسعة';
         break;
-      case 'jeem':
-        icon = Icons.text_fields_rounded;
-        iconColor = const Color(0xFF8E24AA);
-        label = '🔤 Letter J / جِيم';
+      case 'ten':
+        icon = Icons.filter_9_plus_rounded;
+        iconColor = const Color(0xFF14B8A6);
+        label = '🔟 Ten / عشرة';
         break;
 
       default:
+        // Letters category: render prominent Arabic typography badge
+        if (item.categoryId == 'letters') {
+          final letterGlyph = _getArabicLetterGlyph(item.id, item.wordAr);
+          final letterColor = _getLetterColor(item.id);
+          return Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 140,
+                height: 140,
+                decoration: BoxDecoration(
+                  color: letterColor.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: letterColor.withOpacity(0.4), width: 3.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: letterColor.withOpacity(0.12),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    letterGlyph,
+                    style: TextStyle(
+                      fontSize: 68,
+                      fontWeight: FontWeight.w900,
+                      color: letterColor,
+                      height: 1.1,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppDimensions.spaceM),
+              Text(
+                '🔤 ${item.wordEn} • ${item.wordAr}',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textSecondary.withOpacity(0.9),
+                ),
+              ),
+            ],
+          );
+        }
+
         icon = Icons.auto_awesome_rounded;
         iconColor = AppColors.primaryBlue;
         label = '${item.wordEn} / ${item.wordAr}';
@@ -522,5 +561,28 @@ class VocabularyCard extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  static String _getArabicLetterGlyph(String id, String wordAr) {
+    const glyphMap = {
+      'alif': 'أ', 'baa': 'ب', 'taa': 'ت', 'thaa': 'ث', 'jeem': 'ج',
+      'haa': 'ح', 'khaa': 'خ', 'daal': 'د', 'thaal': 'ذ', 'raa': 'ر',
+      'zaay': 'ز', 'seen': 'س', 'sheen': 'ش', 'saad': 'ص', 'daad': 'ض',
+      'ttaa': 'ط', 'zhaa': 'ظ', 'ayn': 'ع', 'ghayn': 'غ', 'faa': 'ف',
+      'qaaf': 'ق', 'kaaf': 'ك', 'laam': 'ل', 'meem': 'م', 'noon': 'ن',
+      'hhaa': 'هـ', 'waaw': 'و', 'yaa': 'ي',
+    };
+    return glyphMap[id.toLowerCase()] ??
+        (wordAr.isNotEmpty ? wordAr.substring(0, 1) : '🔤');
+  }
+
+  static Color _getLetterColor(String id) {
+    const palette = [
+      Color(0xFF8E24AA), Color(0xFF0288D1), Color(0xFF10B981),
+      Color(0xFFF59E0B), Color(0xFFEC4899), Color(0xFF6366F1),
+      Color(0xFF0D9488), Color(0xFFEA580C),
+    ];
+    final hash = id.hashCode.abs();
+    return palette[hash % palette.length];
   }
 }

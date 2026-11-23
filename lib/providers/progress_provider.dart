@@ -37,7 +37,10 @@ class ProgressProvider extends ChangeNotifier {
     if (authProvider != null && authProvider.isAuthenticated) {
       final user = authProvider.currentUser;
       final linkedIds = user?.linkedChildIds ?? const [];
-      final isLinked = linkedIds.contains(childId) || user?.userId == childId;
+      final isLinked = linkedIds.contains(childId) ||
+          user?.userId == childId ||
+          authProvider.linkedChildren.any((c) => c.childId == childId) ||
+          authProvider.selectedChild?.childId == childId;
 
       if (!isLinked) {
         _uiState = UiState.error(

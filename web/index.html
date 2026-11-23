@@ -28,11 +28,129 @@
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
+  <meta name="referrer" content="no-referrer">
 
   <title>asd_learning_assistant</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Immediate Sensory-Friendly Preloader Styles (renders in < 10ms) -->
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #F8FAFC;
+    }
+    #app-loading-indicator {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: linear-gradient(135deg, #F0F4F8 0%, #E8EEF5 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999999;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Cairo", "Tajawal", "Helvetica Neue", sans-serif;
+      transition: opacity 0.4s ease-out, visibility 0.4s ease-out;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .loading-card {
+      background: #FFFFFF;
+      padding: 32px 36px;
+      border-radius: 24px;
+      box-shadow: 0 12px 32px rgba(66, 84, 102, 0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      max-width: 340px;
+      margin: 16px;
+      border: 1px solid #E2E8F0;
+    }
+    .loading-icon-wrap {
+      width: 68px;
+      height: 68px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #E0E7FF 0%, #EDE9FE 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 34px;
+      margin-bottom: 20px;
+      animation: gentle-float 2.5s infinite ease-in-out;
+    }
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #E2E8F0;
+      border-top: 4px solid #6366F1;
+      border-right: 4px solid #8B5CF6;
+      border-radius: 50%;
+      animation: spin 0.9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+      margin-bottom: 18px;
+    }
+    .loading-title {
+      font-size: 19px;
+      font-weight: 700;
+      color: #1E293B;
+      margin: 0 0 6px 0;
+      direction: rtl;
+    }
+    .loading-subtitle {
+      font-size: 13px;
+      font-weight: 500;
+      color: #64748B;
+      margin: 0 0 16px 0;
+      line-height: 1.5;
+    }
+    .loading-bar-container {
+      width: 100%;
+      height: 6px;
+      background: #F1F5F9;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+    }
+    .loading-bar-fill {
+      width: 40%;
+      height: 100%;
+      background: linear-gradient(90deg, #6366F1, #8B5CF6);
+      border-radius: 8px;
+      animation: loading-bar-move 1.4s ease-in-out infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    @keyframes gentle-float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+    @keyframes loading-bar-move {
+      0% { transform: translateX(-100%); width: 30%; }
+      50% { width: 60%; }
+      100% { transform: translateX(350%); width: 30%; }
+    }
+  </style>
 </head>
 <body>
+  <!-- Sensory-Friendly Instant Loading Screen -->
+  <div id="app-loading-indicator" aria-live="polite">
+    <div class="loading-card">
+      <div class="loading-icon-wrap">
+        <span>🌟</span>
+      </div>
+      <div class="loading-spinner"></div>
+      <h2 class="loading-title">جاري تحضير بيئة التعلّم...</h2>
+      <p class="loading-subtitle">Loading ASD Learning Assistant</p>
+      <div class="loading-bar-container">
+        <div class="loading-bar-fill"></div>
+      </div>
+    </div>
+  </div>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader
@@ -41,6 +159,451 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <!-- ASD Sensory Audio Engine (Web Audio & Speech Synthesis) -->
+  <script>
+    (function() {
+      let audioCtx = null;
+
+      function getAudioContext() {
+        if (!audioCtx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) {
+            audioCtx = new AudioCtx();
+          }
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        return audioCtx;
+      }
+
+      // Unlock browser audio context and preload voices on user interaction
+      function unlockAudio() {
+        const ctx = getAudioContext();
+        if (ctx && ctx.state === 'suspended') {
+          ctx.resume();
+        }
+        if (window.speechSynthesis) {
+          if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+          }
+          if (window.speechSynthesis.getVoices) {
+            window.speechSynthesis.getVoices();
+          }
+        }
+      }
+      ['pointerdown', 'touchstart', 'click', 'keydown'].forEach(function(evt) {
+        document.addEventListener(evt, unlockAudio, { passive: true });
+      });
+
+      if (window.speechSynthesis && window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = function() {
+          window.speechSynthesis.getVoices();
+        };
+      }
+
+      // Sensory-friendly celebration and gentle retry chimes via Web Audio API
+      window.playAsdChime = function(isSuccess, volume) {
+        try {
+          const ctx = getAudioContext();
+          if (!ctx) return;
+          if (ctx.state === 'suspended') {
+            ctx.resume();
+          }
+          const vol = typeof volume === 'number' ? Math.max(0, Math.min(1, volume)) : 0.8;
+          const masterGain = ctx.createGain();
+          masterGain.connect(ctx.destination);
+          masterGain.gain.setValueAtTime(vol * 0.35, ctx.currentTime);
+
+          if (isSuccess) {
+            // Gentle star celebration arpeggio: C5 (523.25), E5 (659.25), G5 (783.99)
+            const notes = [
+              { freq: 523.25, time: 0.00, dur: 0.20 },
+              { freq: 659.25, time: 0.10, dur: 0.20 },
+              { freq: 783.99, time: 0.20, dur: 0.40 },
+            ];
+            notes.forEach(function(n) {
+              const osc = ctx.createOscillator();
+              const noteGain = ctx.createGain();
+              osc.type = 'sine';
+              osc.frequency.setValueAtTime(n.freq, ctx.currentTime + n.time);
+              noteGain.connect(masterGain);
+              noteGain.gain.setValueAtTime(0, ctx.currentTime + n.time);
+              noteGain.gain.linearRampToValueAtTime(0.8, ctx.currentTime + n.time + 0.02);
+              noteGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + n.time + n.dur);
+              osc.connect(noteGain);
+              osc.start(ctx.currentTime + n.time);
+              osc.stop(ctx.currentTime + n.time + n.dur);
+            });
+          } else {
+            // Gentle warm retry chime: G4 (392.00) -> F4 (349.23)
+            const notes = [
+              { freq: 392.00, time: 0.00, dur: 0.18 },
+              { freq: 349.23, time: 0.12, dur: 0.28 },
+            ];
+            notes.forEach(function(n) {
+              const osc = ctx.createOscillator();
+              const noteGain = ctx.createGain();
+              osc.type = 'triangle';
+              osc.frequency.setValueAtTime(n.freq, ctx.currentTime + n.time);
+              noteGain.connect(masterGain);
+              noteGain.gain.setValueAtTime(0, ctx.currentTime + n.time);
+              noteGain.gain.linearRampToValueAtTime(0.6, ctx.currentTime + n.time + 0.02);
+              noteGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + n.time + n.dur);
+              osc.connect(noteGain);
+              osc.start(ctx.currentTime + n.time);
+              osc.stop(ctx.currentTime + n.time + n.dur);
+            });
+          }
+        } catch (err) {
+          console.warn('playAsdChime warning:', err);
+        }
+      };
+
+      // Master Audio Management
+      window._activeAsdAudio = null;
+      window._activeUtterances = window._activeUtterances || [];
+
+      // Authentic Arabic phonetic dictionary following classical Arabic phonology
+      const ARABIC_LETTER_RULES = {
+        'أ': 'أَلِفْ', 'ا': 'أَلِفْ', 'أَلِف': 'أَلِفْ',
+        'ب': 'بَاءْ', 'بَاء': 'بَاءْ',
+        'ت': 'تَاءْ', 'تَاء': 'تَاءْ',
+        'ث': 'ثَاءْ', 'ثَاء': 'ثَاءْ',
+        'ج': 'جِيمْ', 'جِيم': 'جِيمْ',
+        'ح': 'حَاءْ', 'حَاء': 'حَاءْ',
+        'خ': 'خَاءْ', 'خَاء': 'خَاءْ',
+        'د': 'دَالْ', 'دَال': 'دَالْ',
+        'ذ': 'ذَالْ', 'ذَال': 'ذَالْ',
+        'ر': 'رَاءْ', 'رَاء': 'رَاءْ',
+        'ز': 'زَايْ', 'زَاي': 'زَايْ',
+        'س': 'سِينْ', 'سِين': 'سِينْ',
+        'ش': 'شِينْ', 'شِين': 'شِينْ',
+        'ص': 'صَادْ', 'صَاد': 'صَادْ',
+        'ض': 'ضَادْ', 'ضَاد': 'ضَادْ',
+        'ط': 'طَاءْ', 'طَاء': 'طَاءْ',
+        'ظ': 'ظَاءْ', 'ظَاء': 'ظَاءْ',
+        'ع': 'عَيْنْ', 'عَيْن': 'عَيْنْ',
+        'غ': 'غَيْنْ', 'غَيْن': 'غَيْنْ',
+        'ف': 'فَاءْ', 'فَاء': 'فَاءْ',
+        'ق': 'قَافْ', 'قَاف': 'قَافْ',
+        'ك': 'كَافْ', 'كَاف': 'كَافْ',
+        'ل': 'لَامْ', 'لاَم': 'لَامْ',
+        'م': 'مِيمْ', 'مِيم': 'مِيمْ',
+        'ن': 'نُونْ', 'نُون': 'نُونْ',
+        'ه': 'هَاءْ', 'هـ': 'هَاءْ', 'هَاء': 'هَاءْ',
+        'و': 'وَاوْ', 'وَاو': 'وَاوْ',
+        'ي': 'يَاءْ', 'يَاء': 'يَاءْ',
+        'alif': 'أَلِفْ', 'alef': 'أَلِفْ', 'baa': 'بَاءْ', 'taa': 'تَاءْ', 'thaa': 'ثَاءْ',
+        'jeem': 'جِيمْ', 'haa': 'حَاءْ', 'khaa': 'خَاءْ', 'daal': 'دَالْ', 'thaal': 'ذَالْ',
+        'raa': 'رَاءْ', 'zaay': 'زَايْ', 'seen': 'سِينْ', 'sheen': 'شِينْ', 'saad': 'صَادْ',
+        'daad': 'ضَادْ', 'ttaa': 'طَاءْ', 'zhaa': 'ظَاءْ', 'ayn': 'عَيْنْ', 'ghayn': 'غَيْنْ',
+        'faa': 'فَاءْ', 'qaaf': 'قَافْ', 'kaaf': 'كَافْ', 'laam': 'لَامْ', 'meem': 'مِيمْ',
+        'noon': 'نُونْ', 'hhaa': 'هَاءْ', 'waaw': 'وَاوْ', 'yaa': 'يَاءْ',
+        'a': 'أَلِفْ', 'b': 'بَاءْ', 't': 'تَاءْ', 'th': 'ثَاءْ', 'j': 'جِيمْ',
+        'h': 'حَاءْ', 'kh': 'خَاءْ', 'd': 'دَالْ', 'dh': 'ذَالْ', 'r': 'رَاءْ',
+        'z': 'زَايْ', 's': 'سِينْ', 'sh': 'شِينْ', 'sad': 'صَادْ', 'dad': 'ضَادْ',
+        't2': 'طَاءْ', 'zh': 'ظَاءْ', 'f': 'فَاءْ', 'q': 'قَافْ', 'k': 'كَافْ',
+        'l': 'لَامْ', 'm': 'مِيمْ', 'n': 'نُونْ', 'ha': 'هَاءْ', 'w': 'وَاوْ', 'y': 'يَاءْ'
+      };
+
+      const ARABIC_NUMBER_RULES = {
+        '1': 'وَاحِدْ', 'one': 'وَاحِدْ', 'وَاحِد': 'وَاحِدْ',
+        '2': 'اِثْنَانْ', 'two': 'اِثْنَانْ', 'اِثْنَان': 'اِثْنَانْ',
+        '3': 'ثَلَاثَةْ', 'three': 'ثَلَاثَةْ', 'ثَلَاثَة': 'ثَلَاثَةْ',
+        '4': 'أَرْبَعَةْ', 'four': 'أَرْبَعَةْ', 'أَرْبَعَة': 'أَرْبَعَةْ',
+        '5': 'خَمْسَةْ', 'five': 'خَمْسَةْ', 'خَمْسَة': 'خَمْسَةْ',
+        '6': 'سِتَّةْ', 'six': 'سِتَّةْ', 'سِتَّة': 'سِتَّةْ',
+        '7': 'سَبْعَةْ', 'seven': 'سَبْعَةْ', 'سَبْعَة': 'سَبْعَةْ',
+        '8': 'ثَمَانِيَةْ', 'eight': 'ثَمَانِيَةْ', 'ثَمَانِيَة': 'ثَمَانِيَةْ',
+        '9': 'تِسْعَةْ', 'nine': 'تِسْعَةْ', 'تِسْعَة': 'تِسْعَةْ',
+        '10': 'عَشَرَةْ', 'ten': 'عَشَرَةْ', 'عَشَرَة': 'عَشَرَةْ'
+      };
+
+      // Helper to synthesize a gentle sensory audio tone if all speech options fail
+      function playSensoryFallbackTone(freq, duration) {
+        try {
+          const ctx = getAudioContext();
+          if (!ctx) return;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq || 523.25, ctx.currentTime);
+          gain.connect(ctx.destination);
+          gain.gain.setValueAtTime(0.001, ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.05);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (duration || 0.4));
+          osc.connect(gain);
+          osc.start();
+          osc.stop(ctx.currentTime + (duration || 0.4));
+        } catch (_) {}
+      }
+
+      // Plays authentic native Arabic human speech stream (works on Windows, Mac, iOS, Android)
+      function playArabicHumanAudio(spokenText, vol, onFallback) {
+        try {
+          const encoded = encodeURIComponent(spokenText);
+          const gUrl = 'https://translate.google.com/translate_tts?ie=UTF-8&tl=ar&client=tw-ob&q=' + encoded;
+          const rvUrl = 'https://code.responsivevoice.org/getvoice.php?t=' + encoded + '&tl=ar';
+
+          window.stopAsdAudio();
+
+          const audio = document.createElement('audio');
+          audio.setAttribute('referrerpolicy', 'no-referrer');
+          audio.referrerPolicy = 'no-referrer';
+          // NOTE: Do NOT set crossOrigin! Unset crossOrigin allows cross-origin audio streaming without CORS headers.
+          audio.volume = vol;
+          window._activeAsdAudio = audio;
+
+          var triedFallback = false;
+          function doFallback() {
+            if (triedFallback) {
+              if (onFallback) onFallback();
+              return;
+            }
+            triedFallback = true;
+            try {
+              const fallbackAudio = document.createElement('audio');
+              fallbackAudio.setAttribute('referrerpolicy', 'no-referrer');
+              fallbackAudio.referrerPolicy = 'no-referrer';
+              fallbackAudio.volume = vol;
+              window._activeAsdAudio = fallbackAudio;
+              fallbackAudio.onerror = function() {
+                if (onFallback) onFallback();
+              };
+              fallbackAudio.src = rvUrl;
+              const p2 = fallbackAudio.play();
+              if (p2 !== undefined) {
+                p2.catch(function() {
+                  if (onFallback) onFallback();
+                });
+              }
+            } catch (_) {
+              if (onFallback) onFallback();
+            }
+          }
+
+          audio.onerror = doFallback;
+          audio.src = gUrl;
+          const p = audio.play();
+          if (p !== undefined) {
+            p.catch(function(err) {
+              console.warn('Google TTS play failed, trying fallback:', err);
+              doFallback();
+            });
+          }
+        } catch (e) {
+          if (onFallback) onFallback();
+        }
+      }
+
+      // Web Speech API synthesis fallback
+      function fallbackToWebSpeech(spokenText, targetLang, vol) {
+        try {
+          if (!window.speechSynthesis) {
+            playSensoryFallbackTone(523.25, 0.3);
+            return;
+          }
+
+          const utterance = new SpeechSynthesisUtterance(spokenText);
+          utterance.lang = targetLang;
+          utterance.volume = vol;
+          const isAr = targetLang.startsWith('ar');
+
+          if (isAr) {
+            utterance.rate = 0.82;
+            utterance.pitch = 1.0;
+          } else {
+            utterance.rate = 0.88;
+            utterance.pitch = 1.05;
+          }
+
+          const voices = window.speechSynthesis.getVoices() || [];
+          var matchedVoice = null;
+          if (voices.length > 0) {
+            if (isAr) {
+              matchedVoice = voices.find(function(v) {
+                const name = (v.name || '').toLowerCase();
+                const vLang = (v.lang || '').toLowerCase();
+                return (
+                  vLang.startsWith('ar') ||
+                  vLang.includes('ar-') ||
+                  name.includes('arabic') ||
+                  name.includes('عربي') ||
+                  name.includes('saudi') ||
+                  name.includes('naayf') ||
+                  name.includes('hoda') ||
+                  name.includes('maged') ||
+                  name.includes('tarik') ||
+                  name.includes('laila') ||
+                  name.includes('salma') ||
+                  name.includes('shakir') ||
+                  name.includes('zariyah')
+                );
+              });
+            } else {
+              matchedVoice = voices.find(function(v) {
+                const vLang = (v.lang || '').toLowerCase();
+                return vLang.startsWith('en') && (vLang.includes('us') || vLang.includes('gb'));
+              }) || voices.find(function(v) {
+                return (v.lang || '').toLowerCase().startsWith('en');
+              });
+            }
+
+            if (matchedVoice) {
+              utterance.voice = matchedVoice;
+              utterance.lang = matchedVoice.lang;
+            }
+          }
+
+          window.stopAsdAudio();
+          window._activeUtterance = utterance;
+          utterance.onend = function() {
+            window._activeUtterance = null;
+          };
+          utterance.onerror = function(e) {
+            window._activeUtterance = null;
+          };
+
+          if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+          }
+
+          window.speechSynthesis.speak(utterance);
+        } catch (err) {
+          console.warn('fallbackToWebSpeech exception:', err);
+          playSensoryFallbackTone(523.25, 0.3);
+        }
+      }
+
+      // Natural speech pronunciation for vocabulary and questions in English & Arabic
+      function speakTextDirect(text, lang, volume) {
+        try {
+          if (!text || typeof text !== 'string' || !text.trim()) return;
+          const vol = typeof volume === 'number' ? Math.max(0, Math.min(1, volume)) : 0.8;
+          const isAr = (lang === 'ar') || /[\u0600-\u06FF]/.test(text);
+
+          var spokenText = text.trim();
+
+          if (isAr) {
+            const lowerKey = spokenText.toLowerCase();
+            if (ARABIC_LETTER_RULES[spokenText]) {
+              spokenText = ARABIC_LETTER_RULES[spokenText];
+            } else if (ARABIC_LETTER_RULES[lowerKey]) {
+              spokenText = ARABIC_LETTER_RULES[lowerKey];
+            } else if (ARABIC_NUMBER_RULES[spokenText]) {
+              spokenText = ARABIC_NUMBER_RULES[spokenText];
+            } else if (ARABIC_NUMBER_RULES[lowerKey]) {
+              spokenText = ARABIC_NUMBER_RULES[lowerKey];
+            }
+
+            playArabicHumanAudio(spokenText, vol, function() {
+              fallbackToWebSpeech(spokenText, 'ar-SA', vol);
+            });
+            return;
+          }
+
+          fallbackToWebSpeech(spokenText, 'en-US', vol);
+        } catch (err) {
+          console.warn('speakTextDirect error:', err);
+        }
+      }
+
+      // Natural speech pronunciation for vocabulary and questions in English & Arabic
+      window.speakAsdWord = function(text, lang, volume) {
+        speakTextDirect(text, lang, volume);
+      };
+
+      // Audio file playback with instant native speech streaming fallback
+      window.playAsdAudio = function(url, volume, fallbackText, lang) {
+        const vol = typeof volume === 'number' ? Math.max(0, Math.min(1, volume)) : 0.8;
+        const isAr = (lang === 'ar') || (fallbackText && /[\u0600-\u06FF]/.test(fallbackText)) || (url && url.includes('/ar/'));
+
+        window.stopAsdAudio();
+
+        // If a real external audio file URL is supplied, play it
+        if (url && (url.startsWith('http://') || url.startsWith('https://')) && !url.includes('undefined')) {
+          try {
+            const audio = document.createElement('audio');
+            audio.setAttribute('referrerpolicy', 'no-referrer');
+            audio.referrerPolicy = 'no-referrer';
+            audio.volume = vol;
+            window._activeAsdAudio = audio;
+
+            var hasHandled = false;
+            function onFail() {
+              if (!hasHandled && fallbackText) {
+                hasHandled = true;
+                speakTextDirect(fallbackText, lang, vol);
+              }
+            }
+
+            audio.onerror = onFail;
+            audio.src = url;
+            const p = audio.play();
+            if (p !== undefined) {
+              p.catch(onFail);
+              return;
+            }
+            return;
+          } catch (_) {}
+        }
+
+        // Direct voice pronunciation for vocabulary items & prompts
+        const targetText = fallbackText || url;
+        if (targetText) {
+          speakTextDirect(targetText, isAr ? 'ar' : (lang || 'en'), vol);
+        }
+      };
+
+      // Halts any active audio or speech
+      window.stopAsdAudio = function() {
+        try {
+          if (window._activeAsdAudio) {
+            window._activeAsdAudio.pause();
+            window._activeAsdAudio.currentTime = 0;
+            window._activeAsdAudio = null;
+          }
+          if (window.speechSynthesis && window.speechSynthesis.speaking) {
+            window.speechSynthesis.cancel();
+          }
+        } catch (_) {}
+      };
+    })();
+  </script>
+  <!-- Auto-dismiss preloader on Flutter first frame -->
+  <script>
+    (function() {
+      var dismissed = false;
+      function dismissSplash() {
+        if (dismissed) return;
+        dismissed = true;
+        var el = document.getElementById('app-loading-indicator');
+        if (el) {
+          el.style.opacity = '0';
+          setTimeout(function() {
+            if (el && el.parentNode) {
+              el.parentNode.removeChild(el);
+            }
+          }, 450);
+        }
+      }
+
+      window.addEventListener('flutter-first-frame', dismissSplash);
+
+      var observer = new MutationObserver(function() {
+        if (document.querySelector('flt-glass-pane') || 
+            document.querySelector('flutter-view') || 
+            document.querySelector('flt-scene-host')) {
+          setTimeout(dismissSplash, 150);
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+
+      setTimeout(dismissSplash, 10000);
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

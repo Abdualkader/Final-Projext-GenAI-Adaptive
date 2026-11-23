@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
+import '../models/matching_game_model.dart';
 import '../models/quiz_question_model.dart';
 import '../models/vocabulary_item_model.dart';
 import '../repositories/mock_data_repository.dart';
 import '../repositories/vocabulary_repository.dart';
+import 'openrouter_service.dart';
 
 /// Contract for AI-powered adaptive exercise generation.
 /// Guarantees that AI API credentials remain strictly on the backend (Task 3).
@@ -28,32 +30,49 @@ abstract class AiAdaptiveService {
     double recentAccuracy = 0.75,
   });
 
+  /// Generates an AI-adapted interactive matching game round (cards to pair).
+  Future<MatchingGameRound> generateMatchingGameRound({
+    required String categoryId,
+    required int difficultyLevel,
+    required String preferredLanguage,
+  });
+
   /// Validates AI response schema and educational domain constraints before presenting to child (Task 5 & 13).
   bool validateExerciseData(Map<String, dynamic> data);
 }
 
-/// Base implementation of [AiAdaptiveService] communicating with Firebase Cloud Functions v2.
+/// Base implementation of [AiAdaptiveService] communicating with OpenRouter free model or Firebase Cloud Functions v2.
 /// Includes comprehensive timeout handling, client-side validation, and instant fallback (Task 5, 6, 15).
 class BaseAiAdaptiveService implements AiAdaptiveService {
-  final FirebaseFunctions? _functions;
+  final FirebaseFunctions? functions;
   final VocabularyRepository _vocabularyRepository;
+  final OpenRouterService _openRouterService;
 
   BaseAiAdaptiveService({
-    FirebaseFunctions? functions,
+    this.functions,
     VocabularyRepository? vocabularyRepository,
-  })  : _functions = functions,
-        _vocabularyRepository = vocabularyRepository ?? BaseVocabularyRepository();
+    OpenRouterService? openRouterService,
+  })  : _vocabularyRepository = vocabularyRepository ?? BaseVocabularyRepository(),
+        _openRouterService = openRouterService ?? OpenRouterService();
 
   FirebaseFunctions get _functionsInstance {
-    return _functions ?? FirebaseFunctions.instanceFor(region: 'us-central1');
+    return functions ?? FirebaseFunctions.instanceFor(region: 'us-central1');
   }
 
   // Canonical Whitelisted Educational Vocabulary Domain for Children with ASD (Task 13)
   static const Map<String, List<String>> allowedCategoryVocabulary = {
     'animals': ['cat', 'dog', 'bird', 'cow', 'lion', 'elephant'],
     'colors': ['red', 'blue', 'green', 'yellow', 'orange', 'purple'],
-    'numbers': ['one', 'two', 'three', 'four', 'five'],
-    'letters': ['alef', 'baa', 'taa', 'thaa', 'jeem'],
+    'numbers': [
+      'one', 'two', 'three', 'four', 'five',
+      'six', 'seven', 'eight', 'nine', 'ten',
+    ],
+    'letters': [
+      'alif', 'alef', 'baa', 'taa', 'thaa', 'jeem', 'haa', 'khaa',
+      'daal', 'thaal', 'raa', 'zaay', 'seen', 'sheen', 'saad', 'daad',
+      'ttaa', 'zhaa', 'ayn', 'ghayn', 'faa', 'qaaf', 'kaaf', 'laam',
+      'meem', 'noon', 'hhaa', 'waaw', 'yaa',
+    ],
   };
 
   @override
@@ -64,11 +83,41 @@ class BaseAiAdaptiveService implements AiAdaptiveService {
     String exerciseType = 'identify_item',
     double recentAccuracy = 0.75,
     Duration timeout = const Duration(seconds: 7),
+    int fallbackIndex = 0,
   }) async {
     // Task 8: Clamped difficulty boundaries
     final clampedDifficulty = difficultyLevel.clamp(1, 3);
     final normalizedLang = preferredLanguage == 'ar' ? 'ar' : 'en';
 
+    // 1. Try Direct OpenRouter with Free Model if API Key configured
+    if (_openRouterService.hasApiKey) {
+      try {
+        final allowedList = allowedCategoryVocabulary[categoryId] ??
+            allowedCategoryVocabulary['animals']!;
+        final vocabDesc = allowedList.join(', ');
+
+        final openRouterData = await _openRouterService.generateQuizExerciseJson(
+          categoryId: categoryId,
+          difficultyLevel: clampedDifficulty,
+          preferredLanguage: normalizedLang,
+          exerciseType: exerciseType,
+          recentAccuracy: recentAccuracy,
+          vocabListDescription: vocabDesc,
+          timeout: timeout,
+        );
+
+        if (openRouterData != null && validateExerciseData(openRouterData)) {
+          debugPrint(
+            'BaseAiAdaptiveService: Successfully generated exercise via OpenRouter (${_openRouterService.model})',
+          );
+          return _mapToQuizQuestionModel(openRouterData, categoryId, clampedDifficulty);
+        }
+      } catch (e) {
+        debugPrint('BaseAiAdaptiveService: OpenRouter direct attempt notice: $e');
+      }
+    }
+
+    // 2. Try Firebase Cloud Functions v2
     try {
       // Task 14: Privacy - Transmit only non-identifying educational context
       final payload = <String, dynamic>{
@@ -79,7 +128,14 @@ class BaseAiAdaptiveService implements AiAdaptiveService {
         'recentAccuracy': recentAccuracy,
       };
 
-      final callable = _functionsInstance.httpsCallable('generateAdaptiveExercise');
+      // Attempt primary function name, with automatic alias fallback
+      HttpsCallable callable;
+      try {
+        callable = _functionsInstance.httpsCallable('generateAdaptiveExercise');
+      } catch (_) {
+        callable = _functionsInstance.httpsCallable('generateAdaptiveQuiz');
+      }
+
       final response = await callable.call(payload).timeout(
         timeout,
         onTimeout: () {
@@ -102,14 +158,102 @@ class BaseAiAdaptiveService implements AiAdaptiveService {
       }
     } catch (e) {
       // Task 15 & 16: Safe error handling and fallback activation (no sensitive data logged)
-      debugPrint('BaseAiAdaptiveService: AI unavailable or encountered error ($e). Activating fallback.');
+      debugPrint('BaseAiAdaptiveService: AI unavailable or encountered notice ($e). Activating verified fallback.');
     }
 
-    // Task 6: Predefined verified fallback mechanism
+    // 3. Task 6: Predefined verified fallback mechanism with varied index
     return _generateFallbackExercise(
       categoryId: categoryId,
       difficultyLevel: clampedDifficulty,
       preferredLanguage: normalizedLang,
+      targetIndex: fallbackIndex,
+    );
+  }
+
+  @override
+  Future<MatchingGameRound> generateMatchingGameRound({
+    required String categoryId,
+    required int difficultyLevel,
+    required String preferredLanguage,
+  }) async {
+    final clampedDifficulty = difficultyLevel.clamp(1, 3);
+    final isArabic = preferredLanguage == 'ar';
+
+    // Difficulty determines number of pairs:
+    // Level 1 (Easy): 2 pairs (4 cards total) - gentle sensory footprint
+    // Level 2 (Medium): 3 pairs (6 cards total)
+    // Level 3 (Hard): 4 pairs (8 cards total)
+    final pairCount = clampedDifficulty == 1 ? 2 : (clampedDifficulty == 2 ? 3 : 4);
+
+    List<VocabularyItemModel> pool = [];
+    try {
+      pool = await _vocabularyRepository.getVocabularyForCategory(categoryId);
+    } catch (_) {}
+
+    if (pool.isEmpty) {
+      pool = MockDataRepository.getVocabularyForCategory(categoryId);
+    }
+
+    // Filter items matching or below current difficulty
+    var candidates = pool.where((item) => item.difficultyLevel <= clampedDifficulty).toList();
+    if (candidates.length < pairCount) {
+      candidates = List.from(pool);
+    }
+    candidates.shuffle();
+
+    final selectedItems = candidates.take(pairCount).toList();
+    final cards = <MatchingCard>[];
+
+    for (final item in selectedItems) {
+      final icon = resolveIcon(item.id);
+      final color = resolveColor(item.id);
+
+      // Card 1: Visual Image/Icon Card
+      cards.add(
+        MatchingCard(
+          id: 'img_${item.id}',
+          pairId: item.id,
+          type: MatchingCardType.image,
+          wordEn: item.wordEn,
+          wordAr: item.wordAr,
+          imageUrl: item.imageUrl,
+          icon: icon,
+          accentColor: color,
+        ),
+      );
+
+      // Card 2: Written Word/Label Card
+      cards.add(
+        MatchingCard(
+          id: 'word_${item.id}',
+          pairId: item.id,
+          type: MatchingCardType.word,
+          wordEn: item.wordEn,
+          wordAr: item.wordAr,
+          imageUrl: item.imageUrl,
+          icon: icon,
+          accentColor: color,
+        ),
+      );
+    }
+
+    cards.shuffle();
+
+    final promptEn = clampedDifficulty == 1
+        ? 'Find matching pairs of words and pictures!'
+        : 'Connect each picture with the right word!';
+    final promptAr = clampedDifficulty == 1
+        ? 'طابق بين الصورة والكلمة المناسبة!'
+        : 'صِل كل صورة بكلمتها الصحيحة!';
+
+    return MatchingGameRound(
+      gameId: 'match_${categoryId}_${DateTime.now().millisecondsSinceEpoch}',
+      categoryId: categoryId,
+      difficultyLevel: clampedDifficulty,
+      cards: cards,
+      totalPairs: pairCount,
+      promptEn: promptEn,
+      promptAr: promptAr,
     );
   }
 
@@ -131,13 +275,34 @@ class BaseAiAdaptiveService implements AiAdaptiveService {
 
     for (int i = 0; i < count; i++) {
       final type = exerciseTypes[i % exerciseTypes.length];
-      final q = await generateExercise(
-        categoryId: categoryId,
-        difficultyLevel: difficultyLevel,
-        preferredLanguage: preferredLanguage,
-        exerciseType: type,
-        recentAccuracy: recentAccuracy,
-      );
+      QuizQuestionModel q;
+      try {
+        q = await generateExercise(
+          categoryId: categoryId,
+          difficultyLevel: difficultyLevel,
+          preferredLanguage: preferredLanguage,
+          exerciseType: type,
+          recentAccuracy: recentAccuracy,
+          fallbackIndex: i,
+        );
+
+        // Ensure questions in the session test unique vocabulary items
+        if (questions.any((existing) => existing.correctChoiceId == q.correctChoiceId)) {
+          q = await _generateFallbackExercise(
+            categoryId: categoryId,
+            difficultyLevel: difficultyLevel,
+            preferredLanguage: preferredLanguage,
+            targetIndex: i,
+          );
+        }
+      } catch (_) {
+        q = await _generateFallbackExercise(
+          categoryId: categoryId,
+          difficultyLevel: difficultyLevel,
+          preferredLanguage: preferredLanguage,
+          targetIndex: i,
+        );
+      }
       questions.add(q);
     }
 
@@ -237,22 +402,30 @@ class BaseAiAdaptiveService implements AiAdaptiveService {
     required String categoryId,
     required int difficultyLevel,
     required String preferredLanguage,
+    int targetIndex = 0,
   }) async {
     try {
-      final pool = await _vocabularyRepository.getVocabularyForCategory(categoryId);
+      final List<VocabularyItemModel> pool;
+      if (categoryId == 'all' || categoryId == 'mixed') {
+        pool = await _vocabularyRepository.getVocabularyItems();
+      } else {
+        pool = await _vocabularyRepository.getVocabularyForCategory(categoryId);
+      }
       if (pool.isNotEmpty) {
         final matched = pool.where((item) => item.difficultyLevel <= difficultyLevel).toList();
-        final target = matched.isNotEmpty ? matched.first : pool.first;
+        final candidateList = matched.isNotEmpty ? matched : pool;
+        final target = candidateList[targetIndex % candidateList.length];
 
+        final otherItems = pool.where((item) => item.id != target.id).toList();
         final selected = <VocabularyItemModel>[target];
-        for (final item in pool) {
-          if (selected.length < 3 && item.id != target.id) {
+        for (final item in otherItems) {
+          if (selected.length < 3) {
             selected.add(item);
           }
         }
 
-        if (selected.length == 3) {
-          final choices = selected.map((item) {
+        if (selected.length >= 3) {
+          final choices = selected.take(3).map((item) {
             return QuizChoice(
               id: item.id,
               labelEn: item.wordEn,
@@ -265,7 +438,7 @@ class BaseAiAdaptiveService implements AiAdaptiveService {
           }).toList();
 
           return QuizQuestionModel(
-            id: 'fallback_${categoryId}_${target.id}',
+            id: 'fallback_${categoryId}_${target.id}_$targetIndex',
             promptEn: 'Where is the ${target.wordEn}?',
             promptAr: 'أين ${target.wordAr}؟',
             correctChoiceId: target.id,
@@ -280,8 +453,12 @@ class BaseAiAdaptiveService implements AiAdaptiveService {
       // In-memory mock fallback
     }
 
-    return MockDataRepository.getQuizQuestionForCategory(categoryId);
+    final mockBank = MockDataRepository.getQuizQuestionsForCategory(categoryId, count: 5);
+    return mockBank[targetIndex % mockBank.length];
   }
+
+  static IconData resolveIcon(String id) => _resolveIcon(id);
+  static Color resolveColor(String id) => _resolveColor(id);
 
   static IconData _resolveIcon(String id) {
     switch (id.toLowerCase()) {
@@ -309,12 +486,41 @@ class BaseAiAdaptiveService implements AiAdaptiveService {
       case 'three':
       case 'four':
       case 'five':
+      case 'six':
+      case 'seven':
+      case 'eight':
+      case 'nine':
+      case 'ten':
         return Icons.pin_rounded;
       case 'alef':
+      case 'alif':
       case 'baa':
       case 'taa':
       case 'thaa':
       case 'jeem':
+      case 'haa':
+      case 'khaa':
+      case 'daal':
+      case 'thaal':
+      case 'raa':
+      case 'zaay':
+      case 'seen':
+      case 'sheen':
+      case 'saad':
+      case 'daad':
+      case 'ttaa':
+      case 'zhaa':
+      case 'ayn':
+      case 'ghayn':
+      case 'faa':
+      case 'qaaf':
+      case 'kaaf':
+      case 'laam':
+      case 'meem':
+      case 'noon':
+      case 'hhaa':
+      case 'waaw':
+      case 'yaa':
         return Icons.menu_book_rounded;
       default:
         return Icons.star_rounded;

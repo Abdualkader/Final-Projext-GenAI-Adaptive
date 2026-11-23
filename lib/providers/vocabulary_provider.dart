@@ -106,17 +106,22 @@ class VocabularyProvider extends ChangeNotifier {
   /// Handles missing audio gracefully without throwing or crashing (Task 12).
   Future<void> playAudioFor(VocabularyItemModel item, {required bool isArabic}) async {
     final rawPath = isArabic ? item.audioUrlAr : item.audioUrlEn;
-    if (rawPath.trim().isEmpty) {
-      debugPrint('VocabularyProvider: No audio configured for ${item.id} (${isArabic ? "ar" : "en"})');
-      return;
-    }
+    final word = isArabic ? item.wordAr : item.wordEn;
 
     _isPlayingAudio = true;
     notifyListeners();
 
     try {
-      final resolvedUrl = await _storageService.getDownloadUrl(rawPath);
-      await _audioService.playVocabularyAudio(resolvedUrl);
+      if (rawPath.trim().isEmpty) {
+        await _audioService.speakText(word, language: isArabic ? 'ar' : 'en');
+      } else {
+        final resolvedUrl = await _storageService.getDownloadUrl(rawPath);
+        await _audioService.playVocabularyAudio(
+          resolvedUrl,
+          wordText: word,
+          language: isArabic ? 'ar' : 'en',
+        );
+      }
     } catch (e) {
       debugPrint('VocabularyProvider audio playback notice (gracefully handled): $e');
     } finally {

@@ -39,30 +39,32 @@ class CategoryCard extends StatelessWidget {
               ),
             ],
           ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppDimensions.spaceM,
-            vertical: AppDimensions.spaceL,
-          ),
+          clipBehavior: Clip.antiAlias,
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Illustration / Icon Badge
+              // Real Image Banner - FILLS the card area
               Expanded(
-                child: Center(
-                  child: _buildIllustration(category.illustrationKey),
-                ),
+                flex: 7,
+                child: _buildBannerImage(category.id, category.illustrationKey),
               ),
-              const SizedBox(height: AppDimensions.spaceS),
               // Category Title
-              Text(
-                category.localizedName(isArabic),
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: category.textColor,
-                  letterSpacing: -0.2,
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimensions.spaceM,
+                  vertical: AppDimensions.spaceM,
                 ),
-                textAlign: TextAlign.center,
+                color: category.backgroundColor,
+                child: Text(
+                  category.localizedName(isArabic),
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: category.textColor,
+                    letterSpacing: -0.2,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ),
             ],
           ),
@@ -71,7 +73,38 @@ class CategoryCard extends StatelessWidget {
     );
   }
 
-  Widget _buildIllustration(String key) {
+  Widget _buildBannerImage(String categoryId, String key) {
+    String? assetPath;
+    switch (categoryId) {
+      case 'animals':
+        assetPath = 'assets/images/cat_animals.jpg';
+        break;
+      case 'colours':
+      case 'colors':
+        assetPath = 'assets/images/cat_colors.jpg';
+        break;
+      case 'numbers':
+        assetPath = 'assets/images/cat_numbers.jpg';
+        break;
+      case 'letters':
+        assetPath = 'assets/images/cat_letters.jpg';
+        break;
+    }
+
+    if (assetPath != null) {
+      return Image.asset(
+        assetPath,
+        width: double.infinity,
+        height: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _buildFallbackIllustration(key),
+      );
+    }
+
+    return _buildFallbackIllustration(key);
+  }
+
+  Widget _buildFallbackIllustration(String key) {
     switch (key) {
       case 'dog':
         return Container(

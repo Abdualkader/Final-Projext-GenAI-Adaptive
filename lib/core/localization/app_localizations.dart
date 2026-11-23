@@ -85,9 +85,18 @@ class AppLocalizations {
       // Parent & Educator Portal (Login & Validation)
       'parent_portal': 'Parent & Educator Portal',
       'parent_login': 'Sign In',
+      'create_account_title': 'Create New Account',
       'email': 'Email Address',
       'password': 'Password',
       'login_btn': 'Enter Portal',
+      'signup_btn': 'Create Account',
+      'dont_have_account': "Don't have an account? Sign Up",
+      'already_have_account': 'Already have an account? Sign In',
+      'full_name': 'Full Name',
+      'name_required': 'Please enter your name',
+      'role': 'Account Role',
+      'role_parent': 'Parent',
+      'role_educator': 'Educator / Specialist',
       'guest_child_btn': 'Continue as Child (No Login Required)',
       'email_required': 'Please enter your email address',
       'password_required': 'Please enter your password',
@@ -96,6 +105,12 @@ class AppLocalizations {
 
       // Child Selection
       'child_selection_title': 'Select Student Profile',
+      'add_child_profile': 'Add Child Profile',
+      'child_name': 'Child Name',
+      'child_name_required': 'Please enter the child name',
+      'child_age_label': 'Age',
+      'child_interest_label': 'Favorite Interest / Subject',
+      'btn_add_child': 'Add Child',
       'child_age': 'Age: {0} years',
       'child_interest': 'Loves Animals!',
       'select_profile_prompt': 'Choose a profile to monitor growth',
@@ -147,6 +162,16 @@ class AppLocalizations {
       'duration_15': '15 Min',
       'duration_20': '20 Min',
       'developer_backend': 'Developer: Backend Verification (Week 2)',
+
+      // OpenRouter & GenAI Games
+      'openrouter_config_title': 'OpenRouter GenAI Engine',
+      'openrouter_config_subtitle': 'Free model adaptive quiz & game generation',
+      'openrouter_api_key': 'OpenRouter API Key',
+      'openrouter_model': 'Active Model',
+      'openrouter_test_btn': 'Test AI Connection',
+      'game_matching_title': 'Match Cards Game',
+      'game_matching_prompt': 'Tap an icon and its matching word!',
+      'game_matching_completed': 'Amazing! All cards matched! 🌟',
 
       // Bottom Navigation
       'nav_home': 'Home',
@@ -217,9 +242,18 @@ class AppLocalizations {
       // Parent & Educator Portal (Login & Validation)
       'parent_portal': 'بوابة الوالدين والمعلمين',
       'parent_login': 'تسجيل الدخول',
+      'create_account_title': 'إنشاء حساب جديد',
       'email': 'البريد الإلكتروني',
       'password': 'كلمة المرور',
       'login_btn': 'دخول البوابة',
+      'signup_btn': 'إنشاء الحساب',
+      'dont_have_account': 'ليس لديك حساب؟ إنشاء حساب جديد',
+      'already_have_account': 'لديك حساب بالفعل؟ تسجيل الدخول',
+      'full_name': 'الاسم الكامل',
+      'name_required': 'يرجى إدخال الاسم',
+      'role': 'الصفة',
+      'role_parent': 'ولي أمر',
+      'role_educator': 'معلم / أخصائي',
       'guest_child_btn': 'المتابعة كطفل (دون تسجيل دخول)',
       'email_required': 'يرجى إدخال البريد الإلكتروني',
       'password_required': 'يرجى إدخال كلمة المرور',
@@ -228,6 +262,12 @@ class AppLocalizations {
 
       // Child Selection
       'child_selection_title': 'اختيار ملف الطفل',
+      'add_child_profile': 'إضافة ملف طفل جديد',
+      'child_name': 'اسم الطفل',
+      'child_name_required': 'يرجى إدخال اسم الطفل',
+      'child_age_label': 'العمر',
+      'child_interest_label': 'الاهتمام أو المادة المفضلة',
+      'btn_add_child': 'إضافة الطفل',
       'child_age': 'العمر: {0} سنوات',
       'child_interest': 'يحب الحيوانات!',
       'select_profile_prompt': 'اختر ملف الطالب لمتابعة التقدم',
@@ -279,6 +319,16 @@ class AppLocalizations {
       'duration_15': '١٥ دقيقة',
       'duration_20': '٢٠ دقيقة',
       'developer_backend': 'المطور: فحص الاتصال بالخادم (Week 2)',
+
+      // OpenRouter & GenAI Games
+      'openrouter_config_title': 'محرك الذكاء الاصطناعي OpenRouter',
+      'openrouter_config_subtitle': 'توليد ذكي ومتكيف للاختبارات والألعاب (نموذج مجاني)',
+      'openrouter_api_key': 'مفتاح OpenRouter API',
+      'openrouter_model': 'النموذج النشط',
+      'openrouter_test_btn': 'اختبار الاتصال بالذكاء الاصطناعي',
+      'game_matching_title': 'لعبة مطابقة البطاقات',
+      'game_matching_prompt': 'المس الرمز والكلمة المطابقة له!',
+      'game_matching_completed': 'رائع جداً! تم تطابق جميع البطاقات بنجاح! 🌟',
 
       // Bottom Navigation
       'nav_home': 'الرئيسية',

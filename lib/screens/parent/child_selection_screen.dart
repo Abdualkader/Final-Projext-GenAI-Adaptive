@@ -14,16 +14,18 @@ import '../../widgets/large_icon_button.dart';
 /// persists selection in state, and provides logout functionality.
 class ChildSelectionScreen extends StatelessWidget {
   final AuthProvider? authProvider;
+  final VoidCallback? onToggleLocale;
 
   const ChildSelectionScreen({
     super.key,
     this.authProvider,
+    this.onToggleLocale,
   });
 
-  AuthProvider? _resolveAuthProvider(BuildContext context) {
+  AuthProvider? _resolveAuthProvider(BuildContext context, {bool listen = false}) {
     if (authProvider != null) return authProvider;
     try {
-      return Provider.of<AuthProvider>(context, listen: false);
+      return Provider.of<AuthProvider>(context, listen: listen);
     } catch (_) {
       return null;
     }
@@ -32,10 +34,10 @@ class ChildSelectionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final provider = _resolveAuthProvider(context);
+    final provider = _resolveAuthProvider(context, listen: true);
 
     // Initial linked children profiles with ASD sensory badges
-    final children = [
+    final children = <Map<String, dynamic>>[
       {
         'id': 'child_adam',
         'name': 'Adam',
@@ -68,6 +70,27 @@ class ChildSelectionScreen extends StatelessWidget {
       },
     ];
 
+    // Merge any dynamically created child profiles
+    final defaultIds = {'child_adam', 'child_sara', 'child_omar'};
+    final customChildren = (provider?.linkedChildren ?? [])
+        .where((c) => !defaultIds.contains(c.childId))
+        .toList();
+
+    for (final c in customChildren) {
+      children.add({
+        'id': c.childId,
+        'name': c.name,
+        'age': c.birthDate != null
+            ? (DateTime.now().difference(c.birthDate!).inDays / 365).round().clamp(3, 12)
+            : 5,
+        'interest': l10n.isArabic ? 'حساب متعلّم 🌱' : 'Learner Account 🌱',
+        'color': const Color(0xFF8B5CF6),
+        'icon': Icons.face_rounded,
+        'accuracy': '85%',
+        'difficulty': c.currentDifficultyLevel,
+      });
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -81,6 +104,19 @@ class ChildSelectionScreen extends StatelessWidget {
         ),
         title: Text(l10n.text('child_selection_title')),
         actions: [
+          // Language toggle button
+          if (onToggleLocale != null)
+            IconButton(
+              icon: const Icon(Icons.language_rounded, color: AppColors.primaryBlue),
+              tooltip: l10n.isArabic ? 'English' : 'العربية',
+              onPressed: onToggleLocale,
+            ),
+          // Add Child Profile Button
+          IconButton(
+            icon: const Icon(Icons.person_add_rounded, color: AppColors.primaryBlue),
+            tooltip: l10n.isArabic ? 'إضافة طفل جديد' : 'Add Child Profile',
+            onPressed: () => _showAddChildDialog(context, provider, l10n),
+          ),
           // Task 8: Logout Button
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: AppColors.textSecondary),
@@ -105,15 +141,27 @@ class ChildSelectionScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: AppDimensions.spaceM),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppDimensions.spaceS),
-                child: Text(
-                  l10n.text('select_profile_prompt'),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: AppColors.textSecondary,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppDimensions.spaceS),
+                      child: Text(
+                        l10n.text('select_profile_prompt'),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  TextButton.icon(
+                    onPressed: () => _showAddChildDialog(context, provider, l10n),
+                    icon: const Icon(Icons.add_circle_rounded, size: 20),
+                    label: Text(l10n.isArabic ? '+ طفل جديد' : '+ New Child'),
+                  ),
+                ],
               ),
               const SizedBox(height: AppDimensions.spaceM),
               Expanded(
@@ -132,8 +180,12 @@ class ChildSelectionScreen extends StatelessWidget {
                       child: InkWell(
                         onTap: () {
                           // Task 7: Store the selected child in application state
-                          final selected = ChildModel(
-                            childId: childData['id'] as String,
+                          final childId = childData['id'] as String;
+                          final existing = provider?.linkedChildren
+                              .where((c) => c.childId == childId)
+                              .firstOrNull;
+                          final selected = existing ?? ChildModel(
+                            childId: childId,
                             parentId: provider?.currentUser?.userId ?? 'parent_default',
                             name: childData['name'] as String,
                             birthDate: DateTime.now().subtract(
@@ -238,10 +290,235 @@ class ChildSelectionScreen extends StatelessWidget {
                   },
                 ),
               ),
+              const SizedBox(height: AppDimensions.spaceS),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    if (provider?.selectedChild == null && children.isNotEmpty) {
+                      final first = children.first;
+                      final selected = ChildModel(
+                        childId: first['id'] as String,
+                        parentId: provider?.currentUser?.userId ?? 'parent_default',
+                        name: first['name'] as String,
+                        birthDate: DateTime.now().subtract(
+                          Duration(days: 365 * (first['age'] as int)),
+                        ),
+                        currentDifficultyLevel: first['difficulty'] as int,
+                        preferredLanguage: l10n.isArabic ? 'ar' : 'en',
+                        createdAt: DateTime.now(),
+                      );
+                      provider?.selectChild(selected);
+                    }
+                    Navigator.pushNamed(context, AppRoutes.childHome);
+                  },
+                  icon: const Icon(Icons.play_circle_filled_rounded),
+                  label: Text(
+                    l10n.text('btn_start_learning'),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryBlue,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusL),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppDimensions.spaceS),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  void _showAddChildDialog(
+    BuildContext context,
+    AuthProvider? provider,
+    AppLocalizations l10n,
+  ) {
+    final nameController = TextEditingController();
+    int selectedAge = 5;
+    int selectedDifficulty = 1;
+    // Default to Arabic as requested by user, while allowing dynamic toggle
+    bool isDialogAr = true;
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final isAr = isDialogAr;
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppDimensions.radiusL),
+              ),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryBlue.withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.person_add_alt_1_rounded,
+                      color: AppColors.primaryBlue,
+                    ),
+                  ),
+                  const SizedBox(width: AppDimensions.spaceM),
+                  Expanded(
+                    child: Text(
+                      isAr ? 'إضافة حساب طفل جديد' : 'Add Child Profile',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () {
+                      setDialogState(() {
+                        isDialogAr = !isDialogAr;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryBlue.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.primaryBlue.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.language_rounded, size: 14, color: AppColors.primaryBlue),
+                          const SizedBox(width: 4),
+                          Text(
+                            isAr ? 'English' : 'العربية',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primaryBlue,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isAr ? 'اسم الطفل (Child\'s Name)' : "Child's Name",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: nameController,
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        hintText: isAr ? 'مثال: سارة، فهد، أحمد' : 'e.g. Liam, Emma',
+                        filled: true,
+                        fillColor: AppColors.background,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppDimensions.radiusM),
+                          borderSide: const BorderSide(color: AppColors.borderLight),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppDimensions.spaceM,
+                          vertical: AppDimensions.spaceS,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppDimensions.spaceM),
+                    Text(
+                      isAr ? 'العمر: $selectedAge سنوات' : 'Age: $selectedAge years',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      children: [4, 5, 6, 7, 8, 9, 10].map((age) {
+                        final isSelected = selectedAge == age;
+                        return ChoiceChip(
+                          label: Text('$age'),
+                          selected: isSelected,
+                          selectedColor: AppColors.primaryBlue,
+                          labelStyle: TextStyle(
+                            color: isSelected ? Colors.white : AppColors.textPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          onSelected: (_) {
+                            setDialogState(() => selectedAge = age);
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: Text(
+                    isAr ? 'إلغاء' : 'Cancel',
+                    style: const TextStyle(color: AppColors.textSecondary),
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final enteredName = nameController.text.trim();
+                    if (enteredName.isEmpty) return;
+
+                    Navigator.pop(dialogContext);
+
+                    if (provider != null) {
+                      await provider.addChildProfile(
+                        name: enteredName,
+                        age: selectedAge,
+                        initialDifficulty: selectedDifficulty,
+                        preferredLanguage: isAr ? 'ar' : 'en',
+                      );
+                    }
+
+                    if (context.mounted) {
+                      Navigator.pushNamed(context, AppRoutes.childHome);
+                    }
+                  },
+                  icon: const Icon(Icons.check_rounded, size: 18),
+                  label: Text(isAr ? 'حفظ وبدء التعلم' : 'Save & Start'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryBlue,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusM),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }

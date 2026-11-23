@@ -20,10 +20,16 @@ import 'providers/settings_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase with platform options
+  // Initialize Firebase with platform options (with a short timeout to prevent blocking on Web)
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
+    ).timeout(
+      const Duration(seconds: 3),
+      onTimeout: () {
+        debugPrint('Firebase initialization timed out; proceeding with cached/offline fallback.');
+        return Firebase.app();
+      },
     );
   } catch (e) {
     debugPrint('Firebase initialization notice: $e');
